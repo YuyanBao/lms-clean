@@ -167,6 +167,7 @@ class GraphBuilder {
   val globalDefsCache = new mutable.HashMap[Sym, Node]
   val globalDefsReverseCache = new mutable.HashMap[(String, Seq[Def]), Node]
   val globalOwnership = new mutable.HashMap[Sym, Double]
+  val globalAliasing = new mutable.HashMap[Sym, mutable.HashSet[Sym]]
 
   var nSyms = 0
   def fresh =
@@ -251,8 +252,8 @@ class GraphBuilder {
   )(writeEfKeys: Exp*): Exp = {
     // simple pre-construction optimization
     println(s"current: ${s}(${as})")
-    println(this.globalDefs)
     println(globalOwnership)
+    println(globalAliasing)
     println("---------------")
     checkOwnership(s, as: _*)
     rewrite(s, as.toList) match {
@@ -304,10 +305,12 @@ class GraphBuilder {
   def reflectOwnership(s: String, sym: Sym, as: Def*): Unit = {
     s match {
       case "NewArray" => globalOwnership += (sym -> 1.0)
-      case "array_get" => {
+
+      case "array_get_ref" => {
         val o_arr = getOwnership(as(0)) / 2
         globalOwnership += (sym -> o_arr)
         updOwnership(as(0), o_arr)
+        addAliasing(as(0), sym)
       }
       case "array_set" => {
         globalOwnership += (sym -> 1.0)
@@ -324,8 +327,20 @@ class GraphBuilder {
       case "array_get" => {
         checkReadable(as(0))
       }
+
+      case "array_get_ref" => {
+        checkReadable(as(0))
+      }
       case "array_set" =>
-        checkWritable(as(0)); checkReadable(as(1));
+        // checkWritable(as(0));
+        checkReadable(as(1));
+        clearAliasing(as(0));
+        updOwnership(as(0), 1.0)
+        println("after clearing aliasing")
+        println(globalOwnership)
+        println(globalAliasing)
+      case "P" =>
+        checkReadable(as(0))
 
       case _ =>
     }
@@ -345,7 +360,6 @@ class GraphBuilder {
   def checkReadable(n: Def): Unit = {
     n match {
       case n @ Sym(_) =>
-        println(globalOwnership.getOrElse(n, -0.1) > 0.0)
         if (
           globalOwnership
             .contains(n) && ~=(globalOwnership.getOrElse(n, -0.1), 0.0, 0.0001)
@@ -373,6 +387,34 @@ class GraphBuilder {
     n match {
       case n @ Sym(_) => globalOwnership += (n -> o)
     }
+  }
+
+  def addAliasing(n: Def, sym: Sym): Unit = {
+    n match {
+      case n @ Sym(_) =>
+        if (!globalAliasing.contains(n)) {
+          globalAliasing += (n -> new mutable.HashSet[Sym]())
+        }
+        globalAliasing(n) += sym
+    }
+  }
+
+  def clearAliasing(n: Def): Unit = {
+    n match {
+      case n @ Sym(_) =>
+        clearAliasing(n)
+
+    }
+  }
+
+  def clearAliasing(s: Sym): Unit = {
+    println(s"in clearAliasing: ${s}")
+    if (globalAliasing.contains(s)) {
+      globalAliasing(s).foreach(clearAliasing)
+      globalAliasing -= s
+    }
+
+    globalOwnership += (s -> 0.0)
   }
 
   def ~=(x: Double, y: Double, precision: Double) = {
