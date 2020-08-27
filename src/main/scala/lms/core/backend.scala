@@ -168,6 +168,7 @@ class GraphBuilder {
   val globalDefsReverseCache = new mutable.HashMap[(String, Seq[Def]), Node]
   val globalOwnership = new mutable.HashMap[Sym, Double]
   val globalAliasing = new mutable.HashMap[Sym, mutable.HashSet[Sym]]
+  val globalFun = new mutable.HashMap[Sym, (Seq[Double], Double)]
 
   var nSyms = 0
   def fresh =
@@ -254,6 +255,7 @@ class GraphBuilder {
     println(s"current: ${s}(${as})")
     println(globalOwnership)
     println(globalAliasing)
+    println(stub.Adapter.typeMap)
     println("---------------")
     checkOwnership(s, as: _*)
     rewrite(s, as.toList) match {
@@ -306,6 +308,13 @@ class GraphBuilder {
     s match {
       case "NewArray" => globalOwnership += (sym -> 1.0)
 
+      // case "array_get" => {
+      //   val o_arr = getOwnership(as(0)) / 2
+      //   globalOwnership += (sym -> o_arr)
+      //   updOwnership(as(0), o_arr)
+      //   addAliasing(as(0), sym)
+      // }
+
       case "array_get_ref" => {
         val o_arr = getOwnership(as(0)) / 2
         globalOwnership += (sym -> o_arr)
@@ -315,6 +324,9 @@ class GraphBuilder {
       case "array_set" => {
         globalOwnership += (sym -> 1.0)
       }
+
+      case "λ" =>
+        registerFun(sym)
 
       case _ =>
     }
@@ -342,9 +354,59 @@ class GraphBuilder {
       case "P" =>
         checkReadable(as(0))
 
+      case "@" => checkAndTransFunCall(as: _*)
+
       case _ =>
     }
   }
+
+  def checkAndTransFunCall(as: Def*): Unit = {
+    val funName = as(0).asInstanceOf[Sym]
+    if (!globalFun.contains(funName)) {
+      registerFun(funName)
+    }
+    println("checkAndTrans")
+    val params = globalFun.getOrElse(funName, (Seq(1.0), 1.0))._1
+    println(s"params is ${params}")
+    println(s"as is ${as.tail}")
+    val args = as.tail.asInstanceOf[Seq[Sym]]
+    println(s"args is ${args}")
+    params.zip(args).foreach {
+      case (a, b) => println(s"b is ${b}"); checkArg(a, b)
+    }
+  }
+
+  def checkArg(params: Double, arg: Sym): Unit = {
+    if (globalOwnership.contains(arg)) {
+      println(s"checkArg: ${params}, ${arg}")
+      val permission = globalOwnership.getOrElse(arg, 1.0)
+      if (~=(params, -1.0, 0.0001) && permission < params)
+        throw new Exception(
+          s"${arg}'s permission is ${permission}, but permission ${params} is required"
+        )
+    }
+  }
+
+  def registerFun(funName: Sym): Unit = {
+    val sig = stub.Adapter.typeMap
+      .getOrElse(funName, manifest[Unknown])
+      .typeArguments
+    val ret = defOwnership(sig.last)
+    val params = sig.init.map(defOwnership(_))
+    println("checkFunCall")
+    globalFun += (funName -> (params, ret))
+    println(globalFun)
+  }
+
+  def defOwnership(m: Manifest[_]): Double =
+    m.typeArguments match {
+      case Nil =>
+        m match {
+          case _ => -1.0 // primitive types
+        }
+      case List(inner) => defOwnership(inner); 1.0
+      case _           => ???
+    }
 
   def checkWritable(n: Def): Unit = {
     n match {

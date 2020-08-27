@@ -48,7 +48,7 @@ class OwnershipTest extends TutorialFunSuite {
             x(1)
           })
 
-        f(x(0))
+        f(x.&(0))
         printf("%d\n", x(0)(0))
 
       }
