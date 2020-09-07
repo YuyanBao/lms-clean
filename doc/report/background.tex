@@ -1,0 +1,85 @@
+\section{Background}
+\subsection{Rust}
+This section summarizes the ownership in Rust \cite{rust}.
+
+In Rust, the memory is automatically returned once the variable that owns it goes out of scope. 
+
+If an object is immutable, the variable scope is its lifetime.
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
+fn main() {
+    {
+        let s = String::from("hello"); // s is valid from this point forward
+
+        // do stuff with s
+    }                                  // this scope is now over, and s is no
+                                       // longer valid
+}
+\end{lstlisting} 
+
+If a variable is primitive type, then an assignment statement does not transfer ownership, as variables are stored in a stack.
+
+If a variable denotes an object, then an assignment statement transfer ownership. The following code gets an compilation error as the ownerhip of the heap locations storing the string is transfered from \CODE{s1} to \CODE{s2}. Therefore, \CODE{s2} is not allowed to access that locations. Returning values can also transfer ownership.
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
+fn main() {
+    let s1 = String::from("hello");
+    let s2 = s1;
+
+    println!("{}, world!", s1);
+}
+\end{lstlisting} 
+
+The semantics for passing a value to a function are similar to those for assigning a value to a variable. Passing a variable to a function will move or copy, just as assignment does. 
+
+\paragraph{References and Borrowing}
+The operator \& allows a variable to reference to an object instead of taking ownership. The following code is compiled.
+\begin{lstlisting}
+fn main() {
+    let s1 = String::from("hello");
+
+    let len = calculate_length(&s1);
+
+    println!("The length of '{}' is {}.", s1, len);
+}
+
+fn calculate_length(s: &String) -> usize {
+    s.len()
+}
+
+\end{lstlisting}
+It allows you to refer to some value without taking ownership of it.
+The scope in which the variable \CODE{s} is valid is the same as any function parameter's scope, but we do not drop what the reference points to when it goes out of scope because we do not have ownership. 
+\paragraph{Mutable Variables}
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
+fn main() {
+    let mut s = String::from("hello");
+
+    s.push_str(", world!"); // push_str() appends a literal to a String
+
+    println!("{}", s); // This will print `hello, world!`
+}
+
+\end{lstlisting}
+\subsection{2nd-Class Values for Fun and (Co)Effect}
+\emph{Properties:} the object \CODE{f} cannot escape from the \emph{lexical sope}, i.e., the function \CODE{withFile}. 
+\begin{itemize}
+\item \CODE{f} cannot be returned from functions
+\end{itemize}
+The owner of \CODE{f1} is \CODE{client}. The owner of \CODE{f} is \CODE{withFile}. 
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
+def withFile[U](n: String)(fn: & File => U): & U = {
+  val f = new File(n);       [f -> 1][]
+  try fn(f) finally f.close()
+}
+def client(){
+  var f1 : File = null
+  withFile(n){ f => f1 = f }
+}
+\end{lstlisting}
+\subsection{Fractional Permission}
+\cite{permission}
+
+% Local Variables:
+% word-wrap: 1
+% auto-fill-function: nil
+% End:
+

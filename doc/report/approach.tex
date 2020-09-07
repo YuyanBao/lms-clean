@@ -1,0 +1,317 @@
+\section{Approach}
+We use fraction permissions to denote ownerhip. Each object has a field called \emph{ownership} denoting by a floating number between 0 and 1 inclusive. The permission 0 means that the variable is not accessible anymore. The permission 1 means that the variable is mutable. If \CODE{o} is greater than 0 and less than 1, then it is readable.
+
+There is a partial function \CODE{globalOwnership} that maps from variables to their permissions.
+There is a partial function \CODE{globalAliasing} that maps from variables to set of variables. 
+
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+val x = new mut Cell  [x -> 1][]
+val y = &x            [x -> 0.5, y -> 0.5][x -> {y}] 
+val z = &x            [x - 0.25, z - 0.25, y - 0.5][x - {y,z}]
+x.f = 5               [x -> 1, z -> 0, y -> 0][]  
+
+\end{lstlisting} 
+
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+if (b){
+val x = new mut Cell  [x -> 1][]
+val y = &x            [x -> 0.5, y -> 0.5][x -> {y}] 
+val z = &x            [x - 0.25, z - 0.25, y - 0.5][x - {y, z}]
+x.f = 5               [x -> 1, z -> 0, y -> 0][]  
+}
+val t = x             [x -> 0, z -> 0, y -> 0][]  
+\end{lstlisting} 
+
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+val t = if (b){
+val x = new mut Cell  [x -> 1][]
+val y = &x            [x -> 0.5, y -> 0.5][x -> {y}] 
+val z = &x            [x - 0.25, z - 0.25, y - 0.5][x ->{y, z}]
+x.f = 5 
+x                     [x -> 1, z -> 0, y -> 0][]  
+}                     [t -> 1, x -> 0, z -> 0, y -> 0][]  
+\end{lstlisting} 
+
+\subsection{Methods}
+There is a partial function \CODE{globalFun} that maps from method names to pairs of parameters' permissions and return value's permission.
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+[f1-> ([1], -1)] 
+def f1(c: Cell) : Unit = {    [c -> 1][] // assumption
+  val c0 = c;                 [c-> 0; c0 -> 1][]
+}    
+def client() = {
+  val cc = new mut Cell;      [cc -> 1][] 
+  f1(cc)                      [cc -> 0][] // assert cc -> 1
+  cc.f                        // error
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+[f2-> ([1], 1)] 
+def f2(c: Cell) : Cell = {    [c -> 1][]  // assumption
+  val c0 = c;                 [c-> 0; c0 -> 1][]
+  c0.f = 5;                   [c-> 0; c0 -> 1][]
+  c0                                     // assert c0 -> 1
+}    
+def client() = {
+  val cc = new mut Cell;      [cc -> 1][]
+  val ct = f1(cc)             [cc -> 0, ct -> 1][] // assert cc == 1; 
+  ct.f = 5;                   // ok   
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+[f3-> ([0.5], -1)] 
+def f3(c: & Cell) : Unit = {  [c -> 0.5][] // assumption
+  val c0 = c;                 [c -> 0.25, c0 -> 0.25][c -> {c0}]
+  c.f = 5;   // error         
+}
+def client() = {
+  val cc = new mut Cell;      [cc -> 1][]
+  f3(&cc)                     [cc -> 1][] // assert cc > 0
+  cc.f = 5;                   [cc -> 1][] // ok
+}  
+\end{lstlisting}
+
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+[f4-> ([0.5], 1)] 
+def f4(c: & Cell) : Unit = {  [c -> 0.5][] // assumption
+  val t = c.f
+  val c0 = new mut Cell(t);   [c -> 0.5, c0 -> 1][]
+  c0                                      // assert c0 -> 1 
+}
+def client() = {
+  val cc = new mut Cell;      [cc -> 1][]
+  val ct = f4(&cc)            [cc -> 1, ct -> 1] // assert cc > 0
+  ct.f = 5;                   // ok
+}  
+\end{lstlisting}
+
+The following two cases may not be sensible. It needs to track aliasing in the method body.
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+[f5-> ([0.5], 0.5)] 
+def f5(c: & Cell) : & Cell = {  [c -> 0.5][] // assumption
+  val cc = new mut Cell;
+  &cc                                      // assert cc > 0
+}
+def client() = {
+  val cc = new mut Cell;      [cc -> 1][]
+  val ct = f5(&cc)            [cc -> 1, ct -> 0.5][?]  // assert cc > 0 
+  ct.f = 5;                    // error
+  cc.f = 5;                   [cc -> 1, ct -> ?][?]
+}  
+\end{lstlisting}
+
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+[f6-> ([1], 0.5)] 
+def f6(c: Cell) : & Cell = {  [c -> 1][] // assumption
+  &c                                      // assert cc > 0
+}
+def client() = {
+  val cc = new mut Cell;      [cc -> 1][]
+  val ct = f6(cc)             [cc -> 0, ct -> 0.5][?]  // assert cc == 1
+  ct.f = 5;                   // error
+  cc.f = 5;                   // error
+}  
+\end{lstlisting}
+
+\clearpage
+\subsection{Higher-order functions}
+%\CODE{f} cannot escape from \CODE{withFile}. So \CODE{fn} has to be \emph{local}:
+%\begin{itemize}
+%\item \CODE{f} cannot be returned from \CODE{fn}
+%\item the return value of \CODE{fn} is readonly.
+%\item \CODE{fn} can only be invoked by \emph{local} functions.
+%\end{itemize}
+\begin{itemize}
+\item There is a partial function \CODE{globalOwnership} that maps from variables to their permissions.
+\item There is a partial function \CODE{globalAliasing} that maps from variables to set of variables. 
+\item There is a partial function \CODE{globalFun} that maps from method names to a tuple of parameters' permissions,  return value's permission and aliasing information.
+\end{itemize}
+
+\paragraph{1st class values}
+
+The following example shows that the method body is not type checked. 
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+[withCell -> ([-1], 0.5, [?]), fn -> ([0.5], 0.5, [p1]), client -> ([-1], -1, [])]
+def withCell(n: Int)(fn: & Cell =>  & Cell): & Cell = {
+  val c = new Cell(n);      [c -> 1][]
+  try val ret = fn(& c)     [c -> 0.5, ret -> 0.5][c -> {ret}]  
+  finally c.free            [c -> 0, ret -> 0][]
+  ret                       [c -> 0, ret -> 0][]    // error
+}
+def client(){
+  val c1: Cell = withCell(5){ c => c};
+}
+\end{lstlisting}
+
+Question marks mean that the return value is aliasing with somebody, but is definitely not with parameters.
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+[withCell -> ([-1], 0.5, [?]), fn -> ([0.5], 0.5, [?]), client -> ([-1], -1, [])]
+def withCell(n: Int)(fn: & Cell =>  & Cell): & Cell = {
+  val c = new Cell(n);      [c -> 1][]
+  try val ret = fn(& c)     [c -> 0.5, ret -> 0.5][]  
+  finally c.free            [c -> 0, ret -> 0.5][] // treated as mutation
+  ret                       [c -> 0, ret -> 0.5]    // ok
+}
+def client(){
+  val c1 : Cell = withCell(5){ c => val t = new Cell(c.f); &t }.
+}
+\end{lstlisting}
+
+%\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+%[withCell -> ([-1], 0.5, []), fn -> ([1], 1, [p1]), client -> ([-1], -1, [])]
+%def withCell(n: Int)(fn:  Cell =>  Object): Object = {
+%  val c = new Cell(n);      [c -> 1][]
+%  try val ret = fn(c)       [c -> 0, ret -> 1][]  
+%  finally c.free            [c -> 0, ret -> 1][]  // error
+%  ret                       [c -> 0, ret -> 1][]
+%}
+%def client(){
+%  val c1: Cell = withCell(5){ f => f};
+%}
+%\end{lstlisting}
+
+\emph{Summary:} 
+\begin{itemize}
+\item The apporach is \emph{not modular} because without knowing the implementation of \CODE{fn}, the aliasing information of \CODE{withCell} cannot be known.
+\item Function parameters are like interfaces with one function in Java.
+\end{itemize}
+
+
+\paragraph{2nd class values} 
+
+%The following example shows that the method body is not type-checked by \CODE{@local}. 
+%\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+%[withCell -> ([-1], 0.5, []), fn -> ([0.5], 0.5, [p1])]
+%def withCell(n: Int)(fn: & Cell =>  & Cell): & Cell = {
+%  @local val c = new Cell(n);    [c -> 1][]
+%  try val ret = fn(& c)          [c -> 0.5, ret -> 0.5][]  // not type-checked by @local
+%  finally c.free                 [c -> 1, ret -> 0][]  
+%  ret                            [c -> 0, ret -> 0][]     
+%}
+%def client(){
+%  val c1: Cell = withCell(5){ f => f};
+%}
+%\end{lstlisting}
+
+\[
+\]
+
+The signature of \CODE{fn} means that the return value of \CODE{fn} is not aliased with the parameter. 
+
+Question marks mean that the return value is aliasing with somebody, but is definitely not with parameters.
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+[withCell -> ([-1], 0.5, []), fn -> ([0.5], 0.5, [?])]
+def withCell(n: Int)(fn: @local & Cell =>  & Cell ): & Cell = {
+  @local val c = new Cell(n);    [c -> 1][]
+  try val ret = fn(& c)          [c -> 0.5, ret -> 0.5][]  
+  finally c.free                 [c -> 0, ret -> 0.5][]  
+  ret                            [c -> 0, ret -> 0.5][]     
+}
+def client(){
+  val c1: Cell = withCell(5){ 
+        c => c      // error
+  }
+  // first-class values are also second-class.
+  val c2: Cell = withCell(5){ c => val t = new Cell(c.f); & t}; [c2 -> 0.5][]
+  // don't know who c2 is aliased with.
+}
+\end{lstlisting}
+
+
+
+%\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+%[withCell -> ([-1], 0.5, []), fn -> ([0.5], 0.5, [?])]
+%def withCell(n: Int)(fn: & Cell =>  Cell): Cell = {
+%  @local val c = new Cell(n);    [c -> 1][]
+%  try val ret = fn(& c)          [c -> 0.5, ret -> 0.5][]  // ret is 2nd-class value
+%  finally c.free                 [c -> 0, ret -> 0.5][]  
+%  ret                            [c -> 0, ret -> 0.5][]     
+%}
+%def client(){
+%  val c1: Cell = withCell(5){ c => val t = new Cell(c.f); & t}; [c1 -> 0.5][]
+%  // don't know who c1 is aliased with.
+%}
+%\end{lstlisting}
+
+Parameters and return values are both @local.
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+[withCell -> ([-1], -1, []), fn -> ([0.5], 0.5, [p1])]
+def withCell(n: Int)(fn: @local & Cell =>  @local & Cell): Unit = {
+  @local val c = new Cell(n);    [c -> 1][]
+  try val ret = fn(& c)          [c -> 0.5, ret -> 0.5][c -> {ret}]
+  ret.f = 5                      [c -> 0, ret -> 1][]
+  finally c.free                 [c -> 0, ret -> 0][]  
+}
+def client(){
+  withCell(5){ c => c }; [][]
+}
+\end{lstlisting}
+
+Nested @local: need to disassemble \CODE{fn}. Is it allowed by @local type system?
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+[withCell -> ([-1], -1, []), fn -> ([0.5], -1, [p1]), <fnn> -> ([0.5], 0.5, [p1])]
+def withCell(n: Int)
+            (fn: @local & Cell =>  (@local & Cell => @local & Cell)): Unit = {
+  @local val c = new Cell(n)     [c -> 1][]
+  try{ 
+    val <ret_fn> = fn(& c)         [c -> 0.5][]  
+    val ret = ret_fn(c)          [c -> 0.5, ret -> 0.5][c -> {ret}]  
+    ret.f = 5                    [c -> 0, ret -> 1][]
+  }
+  finally ret.free               [c -> 0, ret -> 0][]  
+}
+def client(){
+  withCell(5){ c => (c => c) }; [][]
+}
+\end{lstlisting}
+
+%Other cases:
+%\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+%def withCell(n: Int)(fn: @local Cell =>  Unit): Unit = {
+%  @local val c = new Cell(n);    
+%  fn(c)                        
+%}
+%def client(){
+%  @local var c0 = null        
+%  withCell(5){ c => c0 = c) } 
+%  free c0                     
+%}
+%\end{lstlisting}
+
+\clearpage
+\subsection{Properties}
+\begin{itemize}
+\item At any given time, you can have either one mutable reference or any number of immutable references.
+\item References must always be valid.
+\end{itemize}
+
+\subsection{Questions}
+%need a way to distinguish mutable variable and mutable heap locations
+%
+%\begin{lstlisting}[language=Scala]
+%val x = new mut Cell // ok, the instance of Cell is mutable
+%val x = new Cell     // ok, the instance of Cell is not mutable
+%var y = new mut Cell // not ok?
+%var y = new Cell     // 
+%
+%\end{lstlisting}
+
+%The \CODE{typeMap} does not have $\&$ information.
+%
+%I don't see the $\lambda$ node.
+
+
+
+
+
+
+
+% Local Variables:
+% word-wrap: 1
+% auto-fill-function: nil
+% End:
+ 
+
+

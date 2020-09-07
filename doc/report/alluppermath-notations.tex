@@ -1,0 +1,56 @@
+%{math-notations}
+
+% natural numbers
+\newcommand{\NATURALS}{{\rm Nat}}
+
+% functions names inside of math environment
+\newcommand{\fun}[1]{\hbox{\it #1\/}}
+
+% brackets that surround syntax (as in denotational semantics)
+\newcommand{\synbracket}[1]{[\![{#1}]\!]}
+\newcommand{\bigsynbracket}[1]{\ensuremath{\left[\!\!\left[{#1}\right]\!\!\right]}}
+
+% logic
+\newcommand{\IFF}{\Leftrightarrow}
+\newcommand{\DEF}{\stackrel{{\rm def}}{=}}
+\newcommand{\DEFEQUIV}{\stackrel{{\rm def}}{\equiv}}
+\newcommand{\DEFIFF}{\stackrel{{\rm def}}{\IFF}}
+
+% lambda calculus
+\newcommand{\LAMBDA}[1]{\lambda{#1}\:.\:}
+\newcommand{\FREEVARS}[1]{{\it FV\/}\synbracket{#1}}	% free variables
+\newcommand{\FREEIDS}[1]{{\it FreeIds\/}(#1)}	% free identifiers
+\newcommand{\SYNTAXWITHFOR}[3]{[#2/#3]#1}	% subst #2 for #3 in #1
+\newcommand{\WITHFOR}[3]{#1[#2/#3]}		% subst #2 for #3 in #1
+\newcommand{\BETAREDUCESTO}{\stackrel{\beta}{\Rightarrow}}
+\newcommand{\ETAREDUCESTO}{\stackrel{\eta}{\Rightarrow}}
+\newcommand{\DELTAREDUCESTO}{\stackrel{\delta}{\Rightarrow}}
+\newcommand{\BETAEQUALS}{\stackrel{\beta}{=}}
+\newcommand{\ETAREQUALS}{\stackrel{\eta}{=}}
+\newcommand{\DELTAEQUALS}{\stackrel{\delta}{=}}
+
+% higher order lambda calculus
+\newcommand{\POLY}[1]{\Lambda{#1}\:.\:}
+\newcommand{\ALLTYPE}[1]{\forall{#1}\:.\:}
+\newcommand{\EXISTSTYPE}[1]{\exists{#1}\:.\:}
+\newcommand{\DEPFUNTYPE}[1]{\Pi{#1}\:.\:}
+\newcommand{\DEPSUMTYPE}[1]{\Sigma{#1}\:.\:}
+
+% recursion theory
+\newcommand{\ZEROORMORE}[1]{{#1}^{\rm *}}
+\newcommand{\ONEORMORE}[1]{{#1}^{+}}
+
+% category theory
+\newcommand{\DOM}[1]{{\it Domain\/}(#1)}
+\newcommand{\POWERSET}[1]{{\it PowerSet\/}(#1)}
+
+% topology
+\newcommand{\CLOSURE}[1]{\overline{#1}}
+\newcommand{\LUB}{{\rm lub}}			% least upper bound
+
+% set theory
+\def\elem{\hbox{\raise.13ex\hbox{$\scriptstyle\in$}}}
+\newcommand{\GRAPH}{{\it graph}}
+
+% relations
+\newcommand{\RELATIONTYPE}[1]{2^{(#1)}}

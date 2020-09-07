@@ -1,0 +1,281 @@
+\usepackage{listings,array,varwidth}
+\usepackage{mathpartir}
+\usepackage{mathtools}
+
+\usepackage{diagbox}
+\usepackage{float}
+\usepackage{varioref}
+\usepackage{xfrac}
+\usepackage{xcolor}
+\renewcommand{\ttdefault}{pcr} % an alternative for bold tt fonts, if luximono doesn't work
+\usepackage{enumitem}
+\usepackage[skip=2.5pt]{caption}
+\usepackage{slashbox}
+
+
+\makeatletter % allow us to mention @-commands
+\def\arcr{\@arraycr}
+\makeatother
+
+%%----------------------------
+% macro to try to fix the bibliography problems, but this doesn't work...
+%\def\showDOI#1{\mbox{{\tt DOI:}{#1}}}
+\newcommand{\showDOI}[1]{\unskip}
+%%----------------------------
+
+\newcommand{\tikzmark}[1]{\tikz[overlay,remember picture] \node (#1) {};}
+
+\newtheorem{innercustomgeneric}{\customgenericname}
+\providecommand{\customgenericname}{}
+\newcommand{\newcustomtheorem}[2]{%
+  \newenvironment{#1}[1]
+  {%
+   \renewcommand\customgenericname{#2}%
+   \renewcommand\theinnercustomgeneric{##1}%
+   \innercustomgeneric
+  }
+  {\endinnercustomgeneric}
+}
+\newcustomtheorem{re-definition}{Definition}
+\newcustomtheorem{re-lemma}{Lemma}
+
+
+\newcommand*{\Scale}[2][4]{\scalebox{#1}{$#2$}}%
+\newcommand{\nonterm}[1]{\textrm{\textit{#1}}}
+
+\newcommand{\figref}[1]{Fig.~\ref{#1}}  
+\newcommand{\secref}[1]{Section~\ref{#1}} % uses varioref
+\newcommand{\thmref}[1]{Theorem~\ref{#1}}
+\newcommand{\lemref}[1]{Lemma~\ref{#1}}
+\newcommand{\colref}[1]{Corollary~\ref{#1}}
+\newcommand{\defref}[1]{Def.~\ref{#1}}
+\newcommand{\appref}[1]{Appendix~\ref{#1}}
+\newcommand{\tbref}[1]{Table~\ref{#1}}
+
+% Theorems
+%\newcommand{\PROOF}{\topsep 0pt \partopsep 0pt{\em Proof:\/}~~}
+\newcommand{\QED}{\rule{0.4em}{0.65em}}
+
+\newcommand{\Specsharp}{%
+	{\settoheight{\dimen0}{C}Spec\kern-.05em \resizebox{!}{\dimen0}{\raisebox{\depth}{\#}}}}
+\newcommand{\Csharp}{%
+	{\settoheight{\dimen0}{C}C\kern-.05em \resizebox{!}{\dimen0}{\raisebox{\depth}{\#}}}}
+	
+
+\newcommand{\REGION}[1]{\ensuremath{\KW{region}\{#1\}}}
+\newcommand{\THIS}{\KW{this}}
+\newcommand{\REFINES}{\ensuremath{\sqsupseteq}}	
+\newcommand{\REFINESAT}[1]{\ensuremath{\sqsupseteq}^{#1}}
+\newcommand{\ATREFINES}[1]{\ensuremath{\sqsupseteq^{#1}}}
+\newcommand{\DREFINES}[1]{\ensuremath{\sqsupseteq^{*#1}}}
+\newcommand{\TRANS}{\ensuremath{\rightsquigarrow}}
+\newcommand{\PROJ}[2]{\ensuremath{{#1}|_{#2}}}
+
+% Separation Logic
+\newcommand{\WAND}{\ensuremath{-\!\!*}}
+\newcommand{\POINTSTO}{\mapsto}
+\newcommand{\RESTRICT}[2]{\ensuremath{#1 \!\!\downharpoonright\!\! #2}}
+\newcommand{\DRESTRICT}[2]{\ensuremath{#1 \!\!\downharpoonright^{*}\!\! #2}}
+\newcommand{\UPCAST}[3]{\ensuremath{#1 \!\!\upharpoonright\!\!_{#2}^{#3}}}
+\newcommand{\DRAND}{\ensuremath{\&\&}}
+\newcommand{\DROR}{\ensuremath{||}}
+\newcommand{\scon}{\mathbin{\varstar}}
+\newcommand{\ocon}{%
+  \mathbin{\mbox{$\mathrlap{\cup}\hspace*{.15em}
+      \raisebox{.01em}[0ex][0ex]{$\scon$}$\hspace*{.07em}}}}
+\newcommand{\LIMP}{\ensuremath{-\!\!\circ}}
+      
+% Region Logic      
+\newcommand{\Img}{\mbox{\large\textbf{`}}}
+\newcommand{\Sep}{{\bf \sfrac{\cdot}{\cdot}}}
+\newcommand{\DInc}{\hspace{1em}\substack{\mathrlap{<} \\ \mathrlap {>}}\hspace{1em}}
+\newcommand{\Immune}[2]{\ensuremath{{#1}/{#2}\mbox{-immune}}}
+
+\newcommand{\UNDEF}{\bot}
+\newcommand{\ERR}{\textit{err}}
+
+% semantics
+\newcommand{\VAL}{\textit{Val}}
+      
+% % Expression evaluation 
+\newcommand{\MEANINGFUN}[1]{\mathcal{#1}}
+\newcommand{\MEREG}[2]{\MEANINGFUN{R}\synbracket{\Gamma \vdash {#1} }{(#2)}}
+
+\newcommand{\MO}[1]{{\mathcal{MO}} \synbracket{#1}}
+\newcommand{\TYPEJUDG}[2] {{\Delta} \vdash^{\Gamma} {#1}: {#2}}
+\newcommand{\STMTTYPEJUDG}[2] {{\Delta} \vdash^{\Gamma} {#1} \triangleright {#2}}
+
+\newcommand{\BODY}[2]{\textit{body}( {#1}, {#2} )}
+\newcommand{\SUBTYPE}{\ensuremath{\leq:}}
+\newcommand{\OSUBTYPE}{\ensuremath{\leq_T}}
+\newcommand{\ISREF}[1]{\textit{isRef}( {#1}  )  }
+
+% domains and global variables
+\newcommand{\DOMAIN}[1]{\fun{#1}}
+\newcommand{\Heap}{\textit{Heap}}
+\newcommand{\State}{\textit{State}}
+\newcommand{\Store}{\DOMAIN{Store}}
+\newcommand{\RFCTX}{\textit{RefCtx}}
+\newcommand{\MEnv}{\textit{MethEnv}}
+\newcommand{\ReferenceContext}{\DOMAIN{Reference-Context}}
+\newcommand{\Loc}{\set{Loc}}
+\newcommand{\Obj}{\textit{Object}}
+\newcommand{\Value}{\set{Value}}
+\newcommand{\FRM}[2]{\ensuremath{{#1} ~ \textit{frm} ~ {#2}}}
+\newcommand{\REF}{\textit{Ref}}
+\newcommand{\REFTYPE}{\textit{refT}}
+\newcommand{\CName}{\textit{ClassName}}
+\newcommand{\IName}{\textit{InterfaceName}}
+\newcommand{\MName}{\textit{MethodName}}
+\newcommand{\CT}[2]{\textit{CT}({#1}, {#2})}
+\newcommand{\MT}[1]{\textit{MT}({#1})}
+\newcommand{\NULL}{\textit{null}}
+\newcommand{\FName}{\textit{FieldName}}
+\newcommand{\FIELDS}{\textit{fields}}
+\newcommand{\IFIELDS}{\textit{ifields}}
+\newcommand{\DFIELDS}{\textit{dfields}}
+\newcommand{\METHS}{\textit{meths}}
+\newcommand{\SEMMETH}{\textit{SemMeth}}
+\newcommand{\FORMALS}{\textit{formals}}
+\newcommand{\SELFTYPE}{\textit{selftype}}
+\newcommand{\EXTENDS}{\ensuremath{\triangleright}}
+\newcommand{\EXLOCS}[2]{\textit{extLocs}( {#1} \EXTENDS {#2})}
+\newcommand{\DMTYPE}[2]{\textit{dmtype}({#1}, {#2})}
+\newcommand{\SUPERS}[1]{\ensuremath{\textit{supers}({#1})}}
+
+
+% Statements
+\newcommand{\M}[3]{\synbracket{\vdash^{\Gamma} {#1}}_{#2}{#3}}
+\newcommand{\MP}[4]{\synbracket{{#1} \vdash {#2}}_{#3}{#4}}
+\newcommand{\DM}[3]{{\mathcal{D}}\synbracket{\vdash^{\Gamma} {#1}}_{#2}{#3}}
+\newcommand{\SM}[3]{{\mathcal{S}}\synbracket{\vdash^{\Gamma} {#1}}_{#2}{#3}}
+\newcommand{\DCT}{{\mathcal{D}}\synbracket{CT}}
+
+% Type
+\newcommand{\TypJudg}[2]{{#1} \vdash {#2} }
+\newcommand{\OT}[2]{\ensuremath{{#1}\!\!<\!\!{#2}\!\!>}}
+%\newcommand{\OT}[2]{{#1}\!\!<\!\!{#2}\!\!>\!\!}
+\newcommand{\TYPECB}{\textit{tyc}}
+\newcommand{\OWNED}[2]{\ensuremath{\textit{owned}({#1}, {#2})}}
+\newcommand{\OWNER}[2]{\ensuremath{\textit{owner}({#1}, {#2})}}
+\newcommand{\OWNERS}[2]{\ensuremath{\textit{owners}({#1}, {#2})}}
+
+\newcommand{\REP}{\KW{rep}}
+\newcommand{\PEER}{\KW{peer}}
+\newcommand{\LOST}{\KW{lost}}
+\newcommand{\SELF}{\KW{self}}
+\newcommand{\ANY}{\KW{any}}
+\newcommand{\JOIN}[2]{\ensuremath{{#1}\sqcup{#2}}}
+
+\newcommand{\InferX}[1]{\Phi \vdash^{\Gamma} #1}
+\newcommand{\TYInferX}[3]{#1 \vdash^{#2} #3}
+\newcommand{\BInfer}[3]{#1 \vdash_{#2}^{\Gamma} #3}
+
+% Subeffect
+\newcommand{\SUBEFF}[1]{\Phi \vdash^{\Gamma} #1 }
+
+
+% Satisfaction
+\newcommand{\PSAT}[4]{#1 \vDash_{#3}^{#2} #4}
+\newcommand{\SAT}[2]{#1 \vDash_{\theta}^{\Gamma} #2}
+\newcommand{\NSAT}[2]{#1 \not\vDash_{\theta}^{\Gamma} #2}
+
+% semantic footprint function
+\newcommand{\EFFS}[1]{\textit{efs}(\ensuremath{#1})}
+
+\newcommand{\PROV}[2]{{#1}\vdash^{\Gamma} \ensuremath{#2}}
+\newcommand{\TYPROV}[3]{{#1}\vdash^{#2} \ensuremath{#3}}
+\newcommand{\DEFEQUIVR}[1]{\stackrel{{\rm #1}}{=}}
+
+
+%\newcommand{\MV}{\texttt{MV}}
+\newcommand{\FV}{\texttt{FV}}
+%\newcommand{\HR}[1]{\textit{HR}(#1)}
+
+\newcommand{\CODEX}[1]{\texttt{#1}}
+\newcommand{\CODE}[1]{\texttt{#1}}
+\newcommand{\CODEIT}[1]{\textit{#1}}
+\newcommand{\FORALL}{\textit{for all}}
+\newcommand{\EXISTS}{\textit{exists}}
+\newcommand{\IMPLIES}{\textit{implies}}
+\newcommand{\IFF}{\textit{iff}}
+
+% type setting for semantics
+\newcommand{\fun}[1]{\textit{#1}}
+\newcommand{\set}[1]{\textit{#1}}
+\newcommand{\SYNTAXCATEGORY}[1]{\nonterm{#1}}
+\newcommand{\KW}[1]{\texttt{\textbf{#1}}}
+\newcommand{\DOM}{\fun{dom}}
+\newcommand{\CODOM}{\fun{codom}}
+\newcommand{\EXTEND}{\textit{Extend}}
+\newcommand{\DEFAULT}{\mbox{\textit{default}}}
+%\newcommand{\VALALLOC}{\KW{alloc}\!\!\downarrow}
+%\newcommand{\VALVAR}[1]{{#1}\!\!\downarrow}
+\newcommand{\PFAULT}{\textit{p-fault}}
+
+
+\newcommand{\REGRW}{\mbox{\textit{regRW}}}
+\newcommand{\READR}{\mbox{\textit{readR}}}
+\newcommand{\READVAR}{\mbox{\textit{readVar}}}
+\newcommand{\WRITER}{\mbox{\textit{writeR}}}
+\newcommand{\FRESHR}{\mbox{\textit{freshR}}}
+\newcommand{\BND}[1]{\mbox{\textit{bnd}}(#1)}
+
+\newcommand{\Vars}{\set{Vars}}
+\newcommand{\ProgVar}{\set{ProgVar}}
+\newcommand{\QVar}{\set{QVar}}
+\newcommand{\FTPSUB}{\ensuremath{\sqsubseteq}}
+\newcommand{\FTPEQUIV}{\ensuremath{\equiv}}
+
+
+\newcommand{\OK}{\fun{ok}}
+
+% syntactic categories
+\newcommand{\Expr}{\SYNTAXCATEGORY{E}}
+\newcommand{\Exprs}{\SYNTAXCATEGORY{Exprs}}
+\newcommand{\Stmt}{\SYNTAXCATEGORY{S}}
+\newcommand{\Id}{\SYNTAXCATEGORY{Id}}
+\newcommand{\Ids}{\SYNTAXCATEGORY{Ids}}
+\newcommand{\Ins}{\SYNTAXCATEGORY{ins}}
+\newcommand{\RE}{\SYNTAXCATEGORY{R}}
+\newcommand{\Assrt}{\SYNTAXCATEGORY{Assrt}}
+\newcommand{\TypeJudg}{\SYNTAXCATEGORY{TypingJudgment}}
+\newcommand{\ClassTable}{\DOMAIN{ClassTable}}
+
+
+\newenvironment{nscenter}
+ {\parskip=0pt\par\nopagebreak\centering}
+ {\par\noindent\ignorespacesafterend}
+
+
+% ----- listings
+
+\lstdefinelanguage{Scala}%
+{morekeywords={abstract,%
+  case,catch,char,class,%
+  def,else,extends,final,finally,for,%
+  if,import,implicit,%
+  match,module,%
+  new,null,%
+  object,override,%
+  package,private,protected,public,%
+  for,public,return,super,%
+  this,throw,trait,try,type,%
+  val,var,%
+  with,while,%
+  yield,%
+  UNum, output, eval%
+  },%
+  sensitive,%
+  commentstyle=\color{blue},
+  moredelim=**[is][\color{red}]{<}{>},
+  morecomment=[l]//,%
+  morecomment=[s]{/*}{*/},%
+  morestring=[b]",%
+  morestring=[b]',%
+  showstringspaces=false%
+}[keywords,comments,strings]%
+\def\inline{\lstinline[basicstyle=\small]}
+
+\lstset{escapeinside={<<}{>>}}
+
