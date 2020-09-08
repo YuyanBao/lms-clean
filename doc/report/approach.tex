@@ -281,6 +281,96 @@ def client(){
 %\end{lstlisting}
 
 \clearpage
+
+\subsection{Structs}
+
+\cite{haller2010capabilities}
+We use @rep to denote the object is owned by the enclosing structure.
+We use @sep to denote the memory regions reachable from an object is disjoint with other objects.
+
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+@sep              //
+struct Pair{
+  val x : Cell
+  val y : Cell
+}
+
+[shift -> ([1, -1], -1, [])]
+def shift(@ref @mut c: Cell, i: Int) : Unit { // c is not used after the call to shift
+   c.f = c.f + i      
+}
+
+[shift -> ([1, -1], 1, [])]
+def shift1(@mut c: Cell, i: Int) : @mut Cell { // @mut reference has to be returned
+   c.f = c.f + i
+   c      
+}
+
+[incr -> ([0.5, -1], -1, [])]
+def incr(@ref c: Cell, i: Int) : Int {       // c is not used after the call to shift
+   c.f + i        
+}
+
+[incr -> ([0.5, -1], -1, [])]
+def incr1(@ref c: Cell, i: Int) : @ref Cell {  <not safe>
+   val ret = new Cell(c.f + i)
+   @ref ret
+}
+
+[withPair -> ([1, 1], -1, []), fn -> ([0.5], -1, [])]
+def withPair(@sep c1: Cell, @sep c2: Cell)(fn: @local @sep @ref Pair => Int) : Int {
+ @local var p = new Pair(c1, c2)  [p -> 1][]
+ fn(@ref p)                       [p -> 1][]                     
+ shift(@ref @mut p.x)             [p.x -> 1, p.y -> 1][]
+ shift1(@mut p.x)                 [p.x -> 1, p.y -> 1][]
+ val t = incr(@ref p.x)           [p.x -> 1, p.y -> 1][]
+ free(p)                          [p -> 0][]  // assert(p.x -> 1, p.y -> 1)
+}
+
+def client1(){
+  val c = new Cell(1)           [c -> 1][] 
+  val c1 = & c                  [c -> 0.5][c1 -> 0.5][c -> {c1}]
+  val p = withPair(c, c1){ ... }      // error   
+}
+
+def client2(){
+  val c = new Cell(1)                         [c -> 1][] 
+  val c1 = new Cell(2)                        [c -> 1, c1 -> 1][] 
+  val sum = withPair(c, c1){ p => p.x + p.y } [c -> 0, c1 -> 0][]       
+}
+
+\end{lstlisting}
+
+\emph{Array}
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+[add -> ([1, -1], 1, []), withArray -> ([1], 1, []), fn -> ([0.5], -1, [])]
+def add(arr: Array[@sep Pair], idx : Int) : Array[@sep Pair]{
+  val p = new Pair(new Cell(1), new Cell(2))   [arr -> 1, p -> 1]
+  arr[idx] = p                                 [arr#0 -> 1, $\cdots$, arr#arr.length - 1 -> 1] 
+  arr               // assert(arr#0 -> 1, $\cdots$, arr#arr.length - 1 -> 1)
+}
+def withArray(arr: Array[@sep Pair])(fn: @sep & Pair => Int) : Array[@sep Pair]{
+                           [arr -> 1]
+  arr.map(x => fn(x))      [arr#0 -> 1, $\cdots$, arr#arr.length - 1 -> 1]          
+  arr               // assert(arr#0 -> 1, $\cdots$, arr#arr.length - 1 -> 1)
+}
+
+def client(){
+  val arr = Array[@sep Pair](5)                    [arr -> 1][]
+  val arr1 = add(arr, 0)                           [arr-> 0, arr1 -> 1][]
+  val arr2 = withArray(arr1){p => p.x + p.y } [arr-> 0, arr1 -> 0, arr2 -> 1][]
+}
+\end{lstlisting}
+
+\emph{HashMap}
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+def client(){
+  val m = mutable.HashMap[Int, @sep Pair]()
+  val imm = Hash[Int, @sep Pari]()
+}
+\end{lstlisting}
+
+\clearpage
 \subsection{Properties}
 \begin{itemize}
 \item At any given time, you can have either one mutable reference or any number of immutable references.

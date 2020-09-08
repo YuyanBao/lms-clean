@@ -248,8 +248,8 @@
  {\par\noindent\ignorespacesafterend}
 
 
+\definecolor{blue-violet}{rgb}{0.54, 0.17, 0.89}
 % ----- listings
-
 \lstdefinelanguage{Scala}%
 {morekeywords={abstract,%
   case,catch,char,class,%
@@ -266,14 +266,17 @@
   yield,%
   UNum, output, eval%
   },%
+  numbers=left, %
+  mathescape=true,%
   sensitive,%
   commentstyle=\color{blue},
-  moredelim=**[is][\color{red}]{<}{>},
+  moredelim=**[is][\color{red}]{<}{>},%
   morecomment=[l]//,%
-  morecomment=[s]{/*}{*/},%
+  morecomment=[s]{/*}{*/},%  
+  morecomment=[s][\color{blue-violet}]{@}{\ },%
   morestring=[b]",%
   morestring=[b]',%
-  showstringspaces=false%
+  showstringspaces=false%,  
 }[keywords,comments,strings]%
 \def\inline{\lstinline[basicstyle=\small]}
 
