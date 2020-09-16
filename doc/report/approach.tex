@@ -5,18 +5,18 @@ There is a partial function \CODE{globalOwnership} that maps from variables to t
 There is a partial function \CODE{globalAliasing} that maps from variables to set of variables. 
 
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
-val x = new mut Cell  [x -> 1][]
-val y = &x            [x -> 0.5, y -> 0.5][x -> {y}] 
-val z = &x            [x - 0.25, z - 0.25, y - 0.5][x - {y,z}]
+val x = new @mut Cell  [x -> 1][]
+val y = @shr x            [x -> 0.5, y -> 0.5][x -> {y}] 
+val z = @shr x            [x - 0.25, z - 0.25, y - 0.5][x - {y,z}]
 x.f = 5               [x -> 1, z -> 0, y -> 0][]  
 
 \end{lstlisting} 
 
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
 if (b){
-val x = new mut Cell  [x -> 1][]
-val y = &x            [x -> 0.5, y -> 0.5][x -> {y}] 
-val z = &x            [x - 0.25, z - 0.25, y - 0.5][x - {y, z}]
+val x = new @mut Cell  [x -> 1][]
+val y = @shr x            [x -> 0.5, y -> 0.5][x -> {y}] 
+val z = @shr x            [x - 0.25, z - 0.25, y - 0.5][x - {y, z}]
 x.f = 5               [x -> 1, z -> 0, y -> 0][]  
 }
 val t = x             [x -> 0, z -> 0, y -> 0][]  
@@ -24,9 +24,9 @@ val t = x             [x -> 0, z -> 0, y -> 0][]
 
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
 val t = if (b){
-val x = new mut Cell  [x -> 1][]
-val y = &x            [x -> 0.5, y -> 0.5][x -> {y}] 
-val z = &x            [x - 0.25, z - 0.25, y - 0.5][x ->{y, z}]
+val x = new @mut Cell  [x -> 1][]
+val y = @shr x            [x -> 0.5, y -> 0.5][x -> {y}] 
+val z = @shr x            [x - 0.25, z - 0.25, y - 0.5][x ->{y, z}]
 x.f = 5 
 x                     [x -> 1, z -> 0, y -> 0][]  
 }                     [t -> 1, x -> 0, z -> 0, y -> 0][]  
@@ -36,12 +36,12 @@ x                     [x -> 1, z -> 0, y -> 0][]
 There is a partial function \CODE{globalFun} that maps from method names to pairs of parameters' permissions and return value's permission.
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
 [f1-> ([1], -1)] 
-def f1(c: Cell) : Unit = {    [c -> 1][] // assumption
-  val c0 = c;                 [c-> 0; c0 -> 1][]
+def f1(c: @mut Cell) : Unit = {    [c -> 1][] // assumption
+  val c0 = c;                      [c-> 0; c0 -> 1][]
 }    
 def client() = {
-  val cc = new mut Cell;      [cc -> 1][] 
-  f1(cc)                      [cc -> 0][] // assert cc -> 1
+  val cc = new @mut Cell;     [cc -> 1][] 
+  f1(@mut cc)                      [cc -> 0][] // assert cc -> 1
   cc.f                        // error
 }
 \end{lstlisting}
@@ -54,7 +54,7 @@ def f2(c: Cell) : Cell = {    [c -> 1][]  // assumption
   c0                                     // assert c0 -> 1
 }    
 def client() = {
-  val cc = new mut Cell;      [cc -> 1][]
+  val cc = new @mut Cell;      [cc -> 1][]
   val ct = f1(cc)             [cc -> 0, ct -> 1][] // assert cc == 1; 
   ct.f = 5;                   // ok   
 }
@@ -62,12 +62,12 @@ def client() = {
 
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
 [f3-> ([0.5], -1)] 
-def f3(c: & Cell) : Unit = {  [c -> 0.5][] // assumption
+def f3(c: @shr Cell) : Unit = {  [c -> 0.5][] // assumption
   val c0 = c;                 [c -> 0.25, c0 -> 0.25][c -> {c0}]
   c.f = 5;   // error         
 }
 def client() = {
-  val cc = new mut Cell;      [cc -> 1][]
+  val cc = new @mut Cell;      [cc -> 1][]
   f3(&cc)                     [cc -> 1][] // assert cc > 0
   cc.f = 5;                   [cc -> 1][] // ok
 }  
@@ -75,14 +75,14 @@ def client() = {
 
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
 [f4-> ([0.5], 1)] 
-def f4(c: & Cell) : Unit = {  [c -> 0.5][] // assumption
+def f4(c: @shr Cell) : Unit = {  [c -> 0.5][] // assumption
   val t = c.f
-  val c0 = new mut Cell(t);   [c -> 0.5, c0 -> 1][]
+  val c0 = new @mut Cell(t);   [c -> 0.5, c0 -> 1][]
   c0                                      // assert c0 -> 1 
 }
 def client() = {
-  val cc = new mut Cell;      [cc -> 1][]
-  val ct = f4(&cc)            [cc -> 1, ct -> 1] // assert cc > 0
+  val cc = new @mut Cell;      [cc -> 1][]
+  val ct = f4(@shr cc)            [cc -> 1, ct -> 1] // assert cc > 0
   ct.f = 5;                   // ok
 }  
 \end{lstlisting}
@@ -90,13 +90,13 @@ def client() = {
 The following two cases may not be sensible. It needs to track aliasing in the method body.
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
 [f5-> ([0.5], 0.5)] 
-def f5(c: & Cell) : & Cell = {  [c -> 0.5][] // assumption
-  val cc = new mut Cell;
+def f5(c: @shr Cell) : @shr Cell = {  [c -> 0.5][] // assumption
+  val cc = new @mut Cell;
   &cc                                      // assert cc > 0
 }
 def client() = {
-  val cc = new mut Cell;      [cc -> 1][]
-  val ct = f5(&cc)            [cc -> 1, ct -> 0.5][?]  // assert cc > 0 
+  val cc = new @mut Cell;      [cc -> 1][]
+  val ct = f5(@shr cc)            [cc -> 1, ct -> 0.5][?]  // assert cc > 0 
   ct.f = 5;                    // error
   cc.f = 5;                   [cc -> 1, ct -> ?][?]
 }  
@@ -104,12 +104,12 @@ def client() = {
 
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
 [f6-> ([1], 0.5)] 
-def f6(c: Cell) : & Cell = {  [c -> 1][] // assumption
-  &c                                      // assert cc > 0
+def f6(c: Cell) : @shr Cell = {  [c -> 1][] // assumption
+  @shr c                                      // assert cc > 0
 }
 def client() = {
-  val cc = new mut Cell;      [cc -> 1][]
-  val ct = f6(cc)             [cc -> 0, ct -> 0.5][?]  // assert cc == 1
+  val cc = new @mut Cell;      [cc -> 1][]
+  val ct = f6(@mut cc)             [cc -> 0, ct -> 0.5][?]  // assert cc == 1
   ct.f = 5;                   // error
   cc.f = 5;                   // error
 }  
@@ -135,8 +135,8 @@ The following example shows that the method body is not type checked.
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
 [withCell -> ([-1], 0.5, [?]), fn -> ([0.5], 0.5, [p1]), client -> ([-1], -1, [])]
 def withCell(n: Int)(fn: & Cell =>  & Cell): & Cell = {
-  val c = new Cell(n);      [c -> 1][]
-  try val ret = fn(& c)     [c -> 0.5, ret -> 0.5][c -> {ret}]  
+  val c = new @mut Cell(n);      [c -> 1][]
+  try val ret = fn(@shr c)     [c -> 0.5, ret -> 0.5][c -> {ret}]  
   finally c.free            [c -> 0, ret -> 0][]
   ret                       [c -> 0, ret -> 0][]    // error
 }
@@ -148,29 +148,16 @@ def client(){
 Question marks mean that the return value is aliasing with somebody, but is definitely not with parameters.
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
 [withCell -> ([-1], 0.5, [?]), fn -> ([0.5], 0.5, [?]), client -> ([-1], -1, [])]
-def withCell(n: Int)(fn: & Cell =>  & Cell): & Cell = {
-  val c = new Cell(n);      [c -> 1][]
-  try val ret = fn(& c)     [c -> 0.5, ret -> 0.5][]  
+def withCell(n: Int)(fn: @shr Cell =>  @shr Cell): @shr Cell = {
+  val c = new @mut Cell(n);      [c -> 1][]
+  try val ret = fn(@shr c)     [c -> 0.5, ret -> 0.5][]  
   finally c.free            [c -> 0, ret -> 0.5][] // treated as mutation
   ret                       [c -> 0, ret -> 0.5]    // ok
 }
 def client(){
-  val c1 : Cell = withCell(5){ c => val t = new Cell(c.f); &t }.
+  val c1 : Cell = withCell(5){ c => val t = new Cell(c.f); @shr t }. // unsafe
 }
 \end{lstlisting}
-
-%\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
-%[withCell -> ([-1], 0.5, []), fn -> ([1], 1, [p1]), client -> ([-1], -1, [])]
-%def withCell(n: Int)(fn:  Cell =>  Object): Object = {
-%  val c = new Cell(n);      [c -> 1][]
-%  try val ret = fn(c)       [c -> 0, ret -> 1][]  
-%  finally c.free            [c -> 0, ret -> 1][]  // error
-%  ret                       [c -> 0, ret -> 1][]
-%}
-%def client(){
-%  val c1: Cell = withCell(5){ f => f};
-%}
-%\end{lstlisting}
 
 \emph{Summary:} 
 \begin{itemize}
@@ -181,31 +168,14 @@ def client(){
 
 \paragraph{2nd class values} 
 
-%The following example shows that the method body is not type-checked by \CODE{@local}. 
-%\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
-%[withCell -> ([-1], 0.5, []), fn -> ([0.5], 0.5, [p1])]
-%def withCell(n: Int)(fn: & Cell =>  & Cell): & Cell = {
-%  @local val c = new Cell(n);    [c -> 1][]
-%  try val ret = fn(& c)          [c -> 0.5, ret -> 0.5][]  // not type-checked by @local
-%  finally c.free                 [c -> 1, ret -> 0][]  
-%  ret                            [c -> 0, ret -> 0][]     
-%}
-%def client(){
-%  val c1: Cell = withCell(5){ f => f};
-%}
-%\end{lstlisting}
-
-\[
-\]
-
 The signature of \CODE{fn} means that the return value of \CODE{fn} is not aliased with the parameter. 
 
 Question marks mean that the return value is aliasing with somebody, but is definitely not with parameters.
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
 [withCell -> ([-1], 0.5, []), fn -> ([0.5], 0.5, [?])]
-def withCell(n: Int)(fn: @local & Cell =>  & Cell ): & Cell = {
-  @local val c = new Cell(n);    [c -> 1][]
-  try val ret = fn(& c)          [c -> 0.5, ret -> 0.5][]  
+def withCell(n: Int)(fn: @local @shr Cell =>  @shr Cell ): @shr Cell = {
+  @local val c = new @mut Cell(n);    [c -> 1][]
+  try val ret = fn(@shr c)          [c -> 0.5, ret -> 0.5][]  
   finally c.free                 [c -> 0, ret -> 0.5][]  
   ret                            [c -> 0, ret -> 0.5][]     
 }
@@ -214,33 +184,18 @@ def client(){
         c => c      // error
   }
   // first-class values are also second-class.
-  val c2: Cell = withCell(5){ c => val t = new Cell(c.f); & t}; [c2 -> 0.5][]
+  val c2: Cell = withCell(5){ c => val t = new @shr Cell(c.f); & t}; [c2 -> 0.5][] //unsafe
   // don't know who c2 is aliased with.
 }
 \end{lstlisting}
 
 
-
-%\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
-%[withCell -> ([-1], 0.5, []), fn -> ([0.5], 0.5, [?])]
-%def withCell(n: Int)(fn: & Cell =>  Cell): Cell = {
-%  @local val c = new Cell(n);    [c -> 1][]
-%  try val ret = fn(& c)          [c -> 0.5, ret -> 0.5][]  // ret is 2nd-class value
-%  finally c.free                 [c -> 0, ret -> 0.5][]  
-%  ret                            [c -> 0, ret -> 0.5][]     
-%}
-%def client(){
-%  val c1: Cell = withCell(5){ c => val t = new Cell(c.f); & t}; [c1 -> 0.5][]
-%  // don't know who c1 is aliased with.
-%}
-%\end{lstlisting}
-
 Parameters and return values are both @local.
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
 [withCell -> ([-1], -1, []), fn -> ([0.5], 0.5, [p1])]
-def withCell(n: Int)(fn: @local & Cell =>  @local & Cell): Unit = {
-  @local val c = new Cell(n);    [c -> 1][]
-  try val ret = fn(& c)          [c -> 0.5, ret -> 0.5][c -> {ret}]
+def withCell(n: Int)(fn: @local @shr Cell =>  @local @shr Cell): Unit = {
+  val c = new @local @mut Cell(n);    [c -> 1][]
+  try val ret = fn(@shr c)          [c -> 0.5, ret -> 0.5][c -> {ret}]
   ret.f = 5                      [c -> 0, ret -> 1][]
   finally c.free                 [c -> 0, ret -> 0][]  
 }
@@ -253,10 +208,10 @@ Nested @local: need to disassemble \CODE{fn}. Is it allowed by @local type syste
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
 [withCell -> ([-1], -1, []), fn -> ([0.5], -1, [p1]), <fnn> -> ([0.5], 0.5, [p1])]
 def withCell(n: Int)
-            (fn: @local & Cell =>  (@local & Cell => @local & Cell)): Unit = {
+            (fn: @local @shr Cell =>  (@local @shr Cell => @local @shr Cell)): Unit = {
   @local val c = new Cell(n)     [c -> 1][]
   try{ 
-    val <ret_fn> = fn(& c)         [c -> 0.5][]  
+    val <ret_fn> = fn(@shr c)         [c -> 0.5][]  
     val ret = ret_fn(c)          [c -> 0.5, ret -> 0.5][c -> {ret}]  
     ret.f = 5                    [c -> 0, ret -> 1][]
   }
@@ -266,19 +221,6 @@ def client(){
   withCell(5){ c => (c => c) }; [][]
 }
 \end{lstlisting}
-
-%Other cases:
-%\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
-%def withCell(n: Int)(fn: @local Cell =>  Unit): Unit = {
-%  @local val c = new Cell(n);    
-%  fn(c)                        
-%}
-%def client(){
-%  @local var c0 = null        
-%  withCell(5){ c => c0 = c) } 
-%  free c0                     
-%}
-%\end{lstlisting}
 
 \clearpage
 
@@ -296,7 +238,7 @@ struct Pair{
 }
 
 [shift -> ([1, -1], -1, [])]
-def shift(@ref @mut c: Cell, i: Int) : Unit { // c is not used after the call to shift
+def shift(@mut c: Cell, i: Int) : Unit { // c is not used after the call to shift
    c.f = c.f + i      
 }
 
@@ -307,35 +249,35 @@ def shift1(@mut c: Cell, i: Int) : @mut Cell { // @mut reference has to be retur
 }
 
 [incr -> ([0.5, -1], -1, [])]
-def incr(@ref c: Cell, i: Int) : Int {       // c is not used after the call to shift
+def incr(@shr c: Cell, i: Int) : Int {       // c is not used after the call to shift
    c.f + i        
 }
 
 [incr -> ([0.5, -1], -1, [])]
-def incr1(@ref c: Cell, i: Int) : @ref Cell {  <not safe>
+def incr1(@shr c: Cell, i: Int) : @shr Cell {  <not safe>
    val ret = new Cell(c.f + i)
-   @ref ret
+   @shr ret
 }
 
 [withPair -> ([1, 1], -1, []), fn -> ([0.5], -1, [])]
-def withPair(@sep c1: Cell, @sep c2: Cell)(fn: @local @sep @ref Pair => Int) : Int {
+def withPair(@sep c1: Cell, @sep c2: Cell)(fn: @local @sep @shr Pair => Int) : Int {
  @local var p = new Pair(c1, c2)  [p -> 1][]
- fn(@ref p)                       [p -> 1][]                     
- shift(@ref @mut p.x)             [p.x -> 1, p.y -> 1][]
+ fn(@shr p)                       [p -> 1][]                     
+ shift(@mut p.x)             [p.x -> 1, p.y -> 1][]
  shift1(@mut p.x)                 [p.x -> 1, p.y -> 1][]
- val t = incr(@ref p.x)           [p.x -> 1, p.y -> 1][]
+ val t = incr(@shr p.x)           [p.x -> 1, p.y -> 1][]
  free(p)                          [p -> 0][]  // assert(p.x -> 1, p.y -> 1)
 }
 
 def client1(){
-  val c = new Cell(1)           [c -> 1][] 
-  val c1 = & c                  [c -> 0.5][c1 -> 0.5][c -> {c1}]
+  val c = new @mut Cell(1)           [c -> 1][] 
+  val c1 = @shr c                  [c -> 0.5][c1 -> 0.5][c -> {c1}]
   val p = withPair(c, c1){ ... }      // error   
 }
 
 def client2(){
-  val c = new Cell(1)                         [c -> 1][] 
-  val c1 = new Cell(2)                        [c -> 1, c1 -> 1][] 
+  val c = new @mut Cell(1)                         [c -> 1][] 
+  val c1 = new @mut Cell(2)                        [c -> 1, c1 -> 1][] 
   val sum = withPair(c, c1){ p => p.x + p.y } [c -> 0, c1 -> 0][]       
 }
 
@@ -345,7 +287,7 @@ def client2(){
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
 [add -> ([1, -1], 1, []), withArray -> ([1], 1, []), fn -> ([0.5], -1, [])]
 def add(arr: Array[@sep Pair], idx : Int) : Array[@sep Pair]{
-  val p = new Pair(new Cell(1), new Cell(2))   [arr -> 1, p -> 1]
+  val p = new @mut Pair(new Cell(1), new Cell(2))   [arr -> 1, p -> 1]
   arr[idx] = p                                 [arr#0 -> 1, $\cdots$, arr#arr.length - 1 -> 1] 
   arr               // assert(arr#0 -> 1, $\cdots$, arr#arr.length - 1 -> 1)
 }
@@ -371,10 +313,73 @@ def client(){
 \end{lstlisting}
 
 \clearpage
+
+\subsection{Using Ownership to Encode @local}
+Use the modifier \emph{local} to denote that the object or the function value is owned by the enclosing method.
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+def withCell(n: Int)
+    (@owned fn: @local @mut Cell => (@local @mut Cell => @local @mut Cell)): Unit = {
+  val @local c = new @local @mut Cell(n);
+  val @local ret_fn = fn(f)
+  ret_fn.f = 5
+  ret_fn.free 
+}
+def client(){
+  withCell(5){ c => (c => {c.f = 1; c}}
+}
+
+def client1() {
+  var c1 : Cell = null;
+  withFile(n){ c => {c1 = c; c } } // error: c does not have the permission
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+def withCell(n: Int)(@local fn: @local @mut Cell => (@local @mut Cell => Unit): Unit = {
+  val c = @local @mut new Cell(n);
+  val @local ret_fn = fn(f)
+  ret_fn.f = 5
+  ret_fn.free 
+}
+def client(){
+  withCell(5){ c => (c => {c.f = 1}}
+}
+
+def client1() {              
+  var c1 : Cell = null;            // c1's owner is client1()'s owner
+  withFile(n){ c => {c1 = c; c } } // error: c and c1 has different owner
+}
+\end{lstlisting}
+
+Nested functions are \emph{owned} by their enclosing function.
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+def withCell(n: Int) = {
+  val c = new @local @mut Cell(n);
+   def is_even(@mut c0: Cell){
+     if (c0.f == 0)  true
+     else {
+       c0.f = c0.f -1; is_odd(c0) 
+     }
+   }
+   def is_odd(@mut c0: Cell){
+     if (c0.f == 0)  false
+     else {
+       c0.f = c0.f - 1; is_odd(c0)
+     }
+   is_even(c);  
+   free(c)
+}
+\end{lstlisting}
+
+
+
+\clearpage
 \subsection{Properties}
 \begin{itemize}
+\item Data always has a \emph{unique owner}.
 \item At any given time, you can have either one mutable reference or any number of immutable references.
 \item References must always be valid.
+\item The lifetime of passing references (@mut and @shr) spans the definition (scope) of the function.
 \end{itemize}
 
 \subsection{Questions}

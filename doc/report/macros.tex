@@ -12,6 +12,8 @@
 \usepackage[skip=2.5pt]{caption}
 \usepackage{slashbox}
 
+\input{obey}
+\input{grammar}
 
 \makeatletter % allow us to mention @-commands
 \def\arcr{\@arraycr}
@@ -41,7 +43,7 @@
 
 
 \newcommand*{\Scale}[2][4]{\scalebox{#1}{$#2$}}%
-\newcommand{\nonterm}[1]{\textrm{\textit{#1}}}
+\renewcommand{\nonterm}[1]{\textrm{\textit{#1}}}
 
 \newcommand{\figref}[1]{Fig.~\ref{#1}}  
 \newcommand{\secref}[1]{Section~\ref{#1}} % uses varioref
@@ -107,7 +109,7 @@
 
 \newcommand{\BODY}[2]{\textit{body}( {#1}, {#2} )}
 \newcommand{\SUBTYPE}{\ensuremath{\leq:}}
-\newcommand{\OSUBTYPE}{\ensuremath{\leq_T}}
+\newcommand{\MSUBTYPE}{\ensuremath{\leq:_\mu}}
 \newcommand{\ISREF}[1]{\textit{isRef}( {#1}  )  }
 
 % domains and global variables
@@ -145,11 +147,7 @@
 
 
 % Statements
-\newcommand{\M}[3]{\synbracket{\vdash^{\Gamma} {#1}}_{#2}{#3}}
-\newcommand{\MP}[4]{\synbracket{{#1} \vdash {#2}}_{#3}{#4}}
-\newcommand{\DM}[3]{{\mathcal{D}}\synbracket{\vdash^{\Gamma} {#1}}_{#2}{#3}}
-\newcommand{\SM}[3]{{\mathcal{S}}\synbracket{\vdash^{\Gamma} {#1}}_{#2}{#3}}
-\newcommand{\DCT}{{\mathcal{D}}\synbracket{CT}}
+\newcommand{\M}[1]{\Gamma_r \vdash {#1}} 
 
 % Type
 \newcommand{\TypJudg}[2]{{#1} \vdash {#2} }
