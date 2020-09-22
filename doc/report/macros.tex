@@ -100,8 +100,9 @@
 \newcommand{\VAL}{\textit{Val}}
       
 % % Expression evaluation 
-\newcommand{\MEANINGFUN}[1]{\mathcal{#1}}
-\newcommand{\MEREG}[2]{\MEANINGFUN{R}\synbracket{\Gamma \vdash {#1} }{(#2)}}
+\newcommand{\EVAL}[3]{{#1} \vdash {#2}\leadsto {#3}}
+\newcommand{\MEVAL}[3]{{#1} \vdash_{id} {#2}\leadsto {#3}}
+\newcommand{\NMEVAL}[4]{{#1} \vdash_{#4} {#2}\leadsto {#3}}
 
 \newcommand{\MO}[1]{{\mathcal{MO}} \synbracket{#1}}
 \newcommand{\TYPEJUDG}[2] {{\Delta} \vdash^{\Gamma} {#1}: {#2}}
@@ -117,46 +118,15 @@
 \newcommand{\Heap}{\textit{Heap}}
 \newcommand{\State}{\textit{State}}
 \newcommand{\Store}{\DOMAIN{Store}}
-\newcommand{\RFCTX}{\textit{RefCtx}}
-\newcommand{\MEnv}{\textit{MethEnv}}
-\newcommand{\ReferenceContext}{\DOMAIN{Reference-Context}}
-\newcommand{\Loc}{\set{Loc}}
-\newcommand{\Obj}{\textit{Object}}
 \newcommand{\Value}{\set{Value}}
 \newcommand{\FRM}[2]{\ensuremath{{#1} ~ \textit{frm} ~ {#2}}}
 \newcommand{\REF}{\textit{Ref}}
 \newcommand{\REFTYPE}{\textit{refT}}
-\newcommand{\CName}{\textit{ClassName}}
-\newcommand{\IName}{\textit{InterfaceName}}
-\newcommand{\MName}{\textit{MethodName}}
-\newcommand{\CT}[2]{\textit{CT}({#1}, {#2})}
-\newcommand{\MT}[1]{\textit{MT}({#1})}
 \newcommand{\NULL}{\textit{null}}
-\newcommand{\FName}{\textit{FieldName}}
-\newcommand{\FIELDS}{\textit{fields}}
-\newcommand{\IFIELDS}{\textit{ifields}}
-\newcommand{\DFIELDS}{\textit{dfields}}
 \newcommand{\METHS}{\textit{meths}}
-\newcommand{\SEMMETH}{\textit{SemMeth}}
-\newcommand{\FORMALS}{\textit{formals}}
-\newcommand{\SELFTYPE}{\textit{selftype}}
-\newcommand{\EXTENDS}{\ensuremath{\triangleright}}
-\newcommand{\EXLOCS}[2]{\textit{extLocs}( {#1} \EXTENDS {#2})}
-\newcommand{\DMTYPE}[2]{\textit{dmtype}({#1}, {#2})}
-\newcommand{\SUPERS}[1]{\ensuremath{\textit{supers}({#1})}}
-
-
-% Statements
-\newcommand{\M}[1]{\Gamma_r \vdash {#1}} 
 
 % Type
 \newcommand{\TypJudg}[2]{{#1} \vdash {#2} }
-\newcommand{\OT}[2]{\ensuremath{{#1}\!\!<\!\!{#2}\!\!>}}
-%\newcommand{\OT}[2]{{#1}\!\!<\!\!{#2}\!\!>\!\!}
-\newcommand{\TYPECB}{\textit{tyc}}
-\newcommand{\OWNED}[2]{\ensuremath{\textit{owned}({#1}, {#2})}}
-\newcommand{\OWNER}[2]{\ensuremath{\textit{owner}({#1}, {#2})}}
-\newcommand{\OWNERS}[2]{\ensuremath{\textit{owners}({#1}, {#2})}}
 
 \newcommand{\REP}{\KW{rep}}
 \newcommand{\PEER}{\KW{peer}}

@@ -254,7 +254,7 @@ def incr(@shr c: Cell, i: Int) : Int {       // c is not used after the call to 
 }
 
 [incr -> ([0.5, -1], -1, [])]
-def incr1(@shr c: Cell, i: Int) : @shr Cell {  <not safe>
+def incr1(@shr c: Cell, i: Int) : @shr Cell {  <not safe: dangling references>
    val ret = new Cell(c.f + i)
    @shr ret
 }
@@ -315,28 +315,29 @@ def client(){
 \clearpage
 
 \subsection{Using Ownership to Encode @local}
-Use the modifier \emph{local} to denote that the object or the function value is owned by the enclosing method.
+Can Rust's type system prevent \CODE{c} from escaping?
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
 def withCell(n: Int)
-    (@owned fn: @local @mut Cell => (@local @mut Cell => @local @mut Cell)): Unit = {
-  val @local c = new @local @mut Cell(n);
-  val @local ret_fn = fn(f)
+    (fn:  @mut Cell => (@mut Cell => @mut Cell)): Unit = {
+  val c = new Cell(n);
+  val ret_fn = fn(@mut c)
   ret_fn.f = 5
   ret_fn.free 
 }
 def client(){
-  withCell(5){ c => (c => {c.f = 1; c}}
+  withCell(5){ c => (c => {c.f = 1; c})}
 }
 
 def client1() {
   var c1 : Cell = null;
-  withFile(n){ c => {c1 = c; c } } // error: c does not have the permission
+  withCell(n){ c => {c1 = c; c } } // error: c does not have the permission
 }
 \end{lstlisting}
-
+Use the modifier \emph{local} to denote that the object or the function value is owned by the enclosing method.
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
-def withCell(n: Int)(@local fn: @local @mut Cell => (@local @mut Cell => Unit): Unit = {
-  val c = @local @mut new Cell(n);
+def withCell(n: Int)
+    (@local fn: @local @mut Cell => (@local @mut Cell => @local @mut Cell): Unit = {
+  val c = @local new Cell(n);
   val @local ret_fn = fn(f)
   ret_fn.f = 5
   ret_fn.free 
@@ -347,14 +348,14 @@ def client(){
 
 def client1() {              
   var c1 : Cell = null;            // c1's owner is client1()'s owner
-  withFile(n){ c => {c1 = c; c } } // error: c and c1 has different owner
+  withCell(n){ c => {c1 = c; c } } // error: c and c1 has different owner
 }
 \end{lstlisting}
 
 Nested functions are \emph{owned} by their enclosing function.
 \begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
 def withCell(n: Int) = {
-  val c = new @local @mut Cell(n);
+  val c = new @local Cell(n);
    def is_even(@mut c0: Cell){
      if (c0.f == 0)  true
      else {
@@ -371,6 +372,20 @@ def withCell(n: Int) = {
 }
 \end{lstlisting}
 
+In Rust, the following is not allowed:
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+fn main() = {
+  let x = 4;
+  
+  fn equal_to_x(z: i32) -> bool {
+    z == x
+  }
+  
+  let y = 4;
+  
+  assert!(equal_to_x(y));
+}
+\end{lstlisting}
 
 
 \clearpage
@@ -396,6 +411,8 @@ def withCell(n: Int) = {
 %The \CODE{typeMap} does not have $\&$ information.
 %
 %I don't see the $\lambda$ node.
+
+\clearpage
 
 
 
