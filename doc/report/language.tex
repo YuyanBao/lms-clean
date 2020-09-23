@@ -2,44 +2,42 @@
 \label{sec:language}
 
 \subsection{Modifiers}
-A type is either a type variable or consists of an modifier, a type name, and possibly type arguments. There are four types of modifiers.
+A type is either a type variable or consists of an modifier, a type name, and possibly type arguments. There are three types of modifiers.
 \begin{itemize}
 \item \emph{local} expresses that an object does not escape from its defining method.
 \item \emph{sep} expresses that the memory regions reachable from an object is disjoint with other objects.
-\item \emph{transient} in \cite{haller2010capabilities} and \emph{references and borrowing} in Rust expresses that the passing object's permission will be returned back to the caller once the method finishes executing. In another words, the ownership is \emph{transfered with limited lifetime}.
+\item \emph{transient} in \cite{haller2010capabilities} and \emph{references and borrowing} (\KW{mut} and \KW{shr}) in Rust expresses that the passing object's permission will be returned back to the caller once the method finishes executing. In another words, the ownership is \emph{``transfered" with limited lifetime}. (\KW{mut} expresses that the object is mutable. \KW{shr} expreses that the object is read-only.)
 
-Without the \emph{transient} modifier, there are two design choices. 
-the caller loses the permission of the object. (Ownership transfer (Separation logic, Rust))
-\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
-let s = String::from("hello")
-takes_ownership(s);      // s lost the ownership
+Without the \emph{transient} or \KW{mut} or {shr} modifier, the caller loses the permission of the object. (Ownership transfer (Separation logic, Rust))
+%\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+%let s = String::from("hello")
+%takes_ownership(s);      // s lost the ownership
+%
+%let s1 = gives_ownership();  // s1 got the ownership
+%
+%fn takes_ownership(some_string: String) {
+%   println!("{}", some_string);
+%}
+%
+%fn gives_ownership() -> String {
+%  let some_string = String :: from("hello");
+%  some_string
+%}
+%\end{lstlisting}
 
-let s1 = gives_ownership();  // s1 got the ownership
-
-fn takes_ownership(some_string: String) {
-   println!("{}", some_string);
-}
-
-fn gives_ownership() -> String {
-  let some_string = String :: from("hello");
-  some_string
-}
-\end{lstlisting}
-
-\item \emph{mut} expresses that the object is mutable. \emph{shr} expreses that the object is read-only.
 \end{itemize}
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \small
 \centering
 \begin{grammar}%
 \begin{tabular}{r r l}
 %$~$\nonterm{md} & \: & \nonterm{m}(\nonterm{x}: \nonterm{T}):\nonterm{T} \{ \nonterm{t} \}
 $~$\nonterm{t} & \: & \nonterm{c} \| \nonterm{x} \| \KW{new} $\mu_1\mu_2$\nonterm{T} \| $\lambda$\nonterm{x}:$\mu_1\mu_2$\nonterm{T}.\nonterm{t} \| \nonterm{t}\nonterm{t} \| $\lambda$\nonterm{X}.\nonterm{t} \| \nonterm{t}[\nonterm{T}] 
-& & \| \{\nonterm{t},\nonterm{t}\} \| \nonterm{t}.1 \| \nonterm{t}.2 
+& & \| \{\nonterm{t},\nonterm{t}\} \| \nonterm{t}.$1$ \| \nonterm{t}.$2$ 
 $~$\nonterm{v} & \: & \nonterm{c} \| $\lambda$\nonterm{x}:$\mu_1\mu_2$\nonterm{T}.\nonterm{t} \| $\lambda$\nonterm{X}.\nonterm{t} \| \{\nonterm{v},\nonterm{v}\}
-$~$\nonterm{T}$_s$ & \: & \nonterm{B} \| \nonterm{X} \| \nonterm{T}$\to$\nonterm{T} \| $\forall$\nonterm{X}.\nonterm{T} \| \nonterm{T}$\times$\nonterm{T}
-$~\Gamma_s$ & \: & $\emptyset$ \| $\Gamma$, \nonterm{x}:\nonterm{T} \| $\Gamma$,\nonterm{X}
+$~$\nonterm{T}$_s$ & \: & \nonterm{B} \| \nonterm{X} \| \nonterm{T}$_s\to$\nonterm{T}$_s$ \| $\forall$\nonterm{X}.\nonterm{T}$_s$ \| \nonterm{T}$$_s\times$\nonterm{T}$_s$
+$~\Gamma_s$ & \: & $\emptyset$ \| $\Gamma$, \nonterm{x}:\nonterm{T}$_s$ \| $\Gamma$,\nonterm{X}
 $~\mu_1$ & \: & \KW{any} \| \KW{sep}
 $~\mu_2$ & \: & \KW{any} \| \KW{local} \| \KW{mut} \| \KW{shr}
 \end{tabular} %
@@ -48,7 +46,7 @@ $~\mu_2$ & \: & \KW{any} \| \KW{local} \| \KW{mut} \| \KW{shr}
 \label{fig:syntax}
 \end{figure}
 \subsection{Types}
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \begin{mathpar}
 \inferrule[(\emph{O\_Intro})]{ }{mut \MSUBTYPE shr}
 
@@ -59,7 +57,7 @@ $~\mu_2$ & \: & \KW{any} \| \KW{local} \| \KW{mut} \| \KW{shr}
 \caption{Ordering of modifier}
 \label{fig:order-mod}
 \end{figure}
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \begin{mathpar}
 \inferrule[(\emph{ST\_Refl})]{ }
 { \TypJudg{}{T ~ \SUBTYPE T}} 
@@ -77,39 +75,30 @@ $~\mu_2$ & \: & \KW{any} \| \KW{local} \| \KW{mut} \| \KW{shr}
 
 \subsection{Semantics}
 Each closure instance will be identified by a unique token that represents the closure occurence from which it was created \cite{kassios2010specification} and method declarations. Tokens and memory addresses are disjoint. Let $\theta$ map from tokens to closure occurences or method declarations.
+
+There is a store $s$ that maps from variables to values, and a heap $h$ that maps from locations to values. A location is a pair of an address and its owner. Addresses are natural numbers. 
+Heap looks up is denoted by $h(l)$, where $l$ is a location. Heap extension is denoted by $h + (l, v)$, where $\RESTRICT{l}{1} \notin \RESTRICT{\DOM(h)}{1}$. 
+Ownership updates is denoted by $h[addr, o]$, where $(addr, \_) \in \DOM(h)$, and $for all (addr', o') \in \DOM(h). (addr' \neq addr \Rightarrow h[addr, o](addr', o') = h(addr', o')) \land addr == addr' \Rightarrow h[addr, o](addr, o) = h(addr', o')$.
+
 \begin{figure}[!ht]
 \small
 \centering
 \begin{grammar}%
 \begin{tabular}{r r l}
+$~$\nonterm{addr} & \: & $\mathbar{N}$
+$~$\nonterm{l} & \: & (\nonterm{addr},\nonterm{o})
 $~$\nonterm{s} & \: & $\overline{x \mapsto v}$
 $~$\nonterm{h} & \: & $\overline{l \mapsto v}$
-$~$\nonterm{l} & \: & (\nonterm{o},\nonterm{addr})
-$~$\nonterm{o} & \: & \nonterm{addr} \| \nonterm{id} 
-$~$\nonterm{v} & \: & \nonterm{l} \| \nonterm{null}$_l$ \| $\lambda$\nonterm{x}:\nonterm{T}$_r$.\nonterm{t} \| \{\nonterm{v},\nonterm{v}\}
-$~\mu$ & \: & \KW{mut} \| \KW{shr} \| \KW{transient}
-$~\Gamma_r$ & \: & $\emptyset$ \| $\Gamma$, \nonterm{X} $\mapsto$ \nonterm{T}$_r$ \| $\Gamma$,\nonterm{x} $\mapsto$ v
+$~$\nonterm{o} & \: & $\epsilon$ \| \nonterm{addr} \| \nonterm{id} 
+$~$\nonterm{v} & \: & \nonterm{l} \| \nonterm{null}$_l$ \| $\lambda$\nonterm{x}.\nonterm{t} \| \{\nonterm{v},\nonterm{v}\}
+$~\mu$ & \: & \KW{mut}\& \| \KW{shr}\& \| \KW{sep}
+%$~\Gamma_r$ & \: & $\emptyset$ \| $\Gamma$, \nonterm{X} $\mapsto$ \nonterm{T}$_r$ \| $\Gamma$,\nonterm{x} $\mapsto$ v
 \end{tabular} %
 \end{grammar}
 \caption{Definition of the runtime model.}
 \label{fig:runtime}
 \end{figure}
 
-\begin{figure}[!ht]
-\begin{mathpar}
-\inferrule[(\emph{ST\_Refl})]{ }
-{ \TypJudg{}{T ~ \SUBTYPE T}} 
-
-\inferrule[(\emph{ST\_Fun})]{ \TypJudg{}{T_1 \SUBTYPE T_1'} \\ \TypJudg{}{T_2' \SUBTYPE T_2}}
-{\TypJudg{}{T_1' \mapsto T_2' \SUBTYPE T_1 \mapsto T_2}}
-
-\inferrule[(\emph{ST\_Trans})]{  \TypJudg{}{T_1 \SUBTYPE T_2} \\ \TypJudg{}{T_2 \SUBTYPE T_3 }}
-{ \TypJudg{}{T_1 ~ \SUBTYPE T_3}} \\
-
-\end{mathpar}
-\caption{Runtime typing rules}
-\label{fig:subtypes}
-\end{figure}
 
 \figref{fig:semantics} shows the operational semantics. The computation tracks ownership.
 
@@ -118,23 +107,61 @@ $~\Gamma_r$ & \: & $\emptyset$ \| $\Gamma$, \nonterm{X} $\mapsto$ \nonterm{T}$_r
 \inferrule[(\emph{evar})]{s(x) = v }
 {\MEVAL{(s, h)}{x}{(s, h), v}}
 
-\inferrule[(\emph{enew})]{\KW{fresh}(l) \\ v = (id, l) \\ \overline{v} = \DEFAULT(T) \\ h' = h + (l, \overline{(l, v)})}
-{\MEVAL{(s, h)}{\KW{new} ~ T}{(s, h'), v}}
+\inferrule[(\emph{enew})]{\KW{fresh}(addr) \\ l = (addr, id) \\ v = \DEFAULT(T, addr) \\ h' = h + (l, v)}
+{\MEVAL{(s, h)}{\KW{new} ~ T}{(s, h'), l}}
 
 %\inferrule[(\emph{eabs})]{ v = \lambda x . t \\ c' = c + (id, v) }
 %{\MEVAL{(s, h)}{\lambda x:T_r.t}{(s, h'), v}}
 
 \begin{array}{l}
-\inferrule[(\emph{eproj})] { \MEVAL{(s, h)}{t}{(id', l)} \\ v = h(l + i)}
+\inferrule[(\emph{eproj})] { \MEVAL{(s, h)}{t}{l} \\ v = h(l)[i]}
 {\MEVAL{(s, h)}{t.i}{(s, h), v}} \\
 \end{array}
 
-\inferrule[(\emph{eapp1})]{ \theta(id') = \lambda x. t_3 \\ \MEVAL{(s, h)}{t_2}{(s, h), (id_1, l_1)} \\ h_2 = h_1[?, l_1][o, l] \\ \NMEVAL{(s, x:(id_1, l), h)}{t_3}{(s, h_1), (o, l)}{id_2}}
-{\MEVAL{(s, h)}{t_1 t_2}{(s, h_2), (o, l)}}
+\inferrule[(\emph{eapp})]{ \theta(id_1) = \lambda x. t_3 \\ \MEVAL{(s, h)}{t_2}{(s, h), (addr, o)} \\ h_2 = (h_1[addr, \epsilon][addr_1, o_1]) \\ \NMEVAL{(s, x:(addr, o), h)}{t_3}{(s_1, h_1), (addr_1, o_1)}{id_1}}
+{\MEVAL{(s, h)}{t_1 t_2}{(s, h_2), (addr_1, o_1)}}
 
-\inferrule[(\emph{eapp2})]{ \theta(id') = \lambda x. t_3 \\ \MEVAL{(s, h)}{t_2}{(s, h), (l_o, l)} \\ h_2 = h_1[?, l][l', id'] \\ \NMEVAL{(s, x:(l_o, l), h)}{t_3}{(s, h_1), (l', id')}{id'}}
-{\MEVAL{(s, h)}{t_1 t_2}{(s, h_2), (l', id')}}
 \end{mathpar}
 \caption{Operational Semantics}
 \label{fig:semantics}
+\end{figure}
+
+\begin{figure}[!htb]
+\begin{mathpar}
+\inferrule[(\emph{tbnew})]{ }
+{ \TypJudg{\Gamma}{\KW{new} ~ T : \KW{own} ~ T}} 
+
+\inferrule[(\emph{tpair})]{\TypJudg{\Gamma}{t_1 : \KW{own} ~ T_1 \triangleright \epsilon}  \\ \TypJudg{\Gamma}{t_2: \KW{own} ~ T_2 \triangleright \epsilon}} 
+{ \TypJudg{\Gamma}{\{t_1, t_2\} : \KW{own} ~ T_1 \times T_2} }
+
+\inferrule[(\emph{tproj})]{\TypJudg{\Gamma}{t : \KW{own} ~ T_1  \times T_2 \triangleright \epsilon;} \\ \Gamma' = \Gamma + (t.1:\KW{own} ~ T_1) + (t.2 : \KW{own} ~ T_2)}
+{ \TypJudg{\Gamma'}{t.1 : \KW{own} ~ T_1 } }
+
+
+\inferrule[(\emph{tbmute})]{ x : \KW{own} ~ T \in \Gamma }
+{ \TypJudg{\Gamma}{\KW{mut} \& ~ x : \REF_{mut}}} 
+
+\inferrule[(\emph{tbreborrow})]{ x : \REF_{mut} ~ T \in \Gamma }
+{ \TypJudg{\Gamma}{\KW{mut} \& ~ x : \REF_{mut} ~ T}} 
+
+\inferrule[(\emph{tbshare})]{ x : \KW{own} ~ T \in \Gamma }
+{ \TypJudg{\Gamma}{\KW{shr} \& ~ x : \REF_{shr} ~ T}}
+
+
+\end{mathpar}
+\caption{Static typing rules for ownership and borrowing}
+\label{fig:subtypes}
+\end{figure}
+
+\begin{figure}[!htb]
+\begin{mathpar}
+\inferrule[(\emph{tsnew})]{ }
+{ \TypJudg{\Gamma}{\KW{new} ~ T : \KW{sep}, \KW{own} ~ T}} 
+
+\inferrule[(\emph{tspair})]{\TypJudg{\Gamma}{t_1 : \KW{sep}, \KW{own} ~ T_1 \triangleright  \epsilon } \\ \TypJudg{\Gamma}{t_2 : \KW{sep}, \KW{own} ~ T_2 \triangleright  \epsilon} }
+{\TypJudg{\Gamma}{ \{t_1, t_2\} : \KW{sep}, \KW{own} ~ T_1 \times T_2}}
+
+\end{mathpar}
+\caption{Static typing rules for separation and ownership}
+\label{fig:subtypes}
 \end{figure}
