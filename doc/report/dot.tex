@@ -1,0 +1,123 @@
+\section{Language}
+\begin{figure}[!htb]
+\small
+\centering
+\begin{tabular}{l | l}
+\begin{tabular}{r l l}
+\nonterm{d} & ::=  & Dependency \\
+& $0$ 	& not track \\
+& $\emptyset$ &  emptyset \\
+& \{\nonterm{x}\} & singleton set \\
+& d$_1$ $\cup$ d$_2$  & set union \\
+& d$_1$ $\backslash$ d$_2$ & set subtraction\\
+\nonterm{T} & ::= & Type \\
+& \nonterm{B} & Boolean \\
+& \nonterm{ref}$^{d}$ & Reference type \\
+& \nonterm{f}$^{d}$ & ??? \\
+& \nonterm{T}$_1$ $\to$ \nonterm{T}$_2$ $\to$ \nonterm{T}$_3$ & type of functions \\
+\nonterm{t} & ::= & Term \\
+& \nonterm{c} & constant \\
+& \nonterm{x} & variable \\
+& \nonterm{alloc} & allocation \\
+& \KW{let} \nonterm{x} = \nonterm{t}$_1$ \KW{in} \nonterm{t}$_2$  & let binding \\
+& $\lambda$\nonterm{x}.\nonterm{t} & abstraction \\
+& \nonterm{t}$_1$\nonterm{t}$_2$ & application \\
+\end{tabular} &
+\begin{tabular}{r l l}
+$\Gamma$ & :=  & Type context \\
+& $\emptyset$ & Empty context \\
+& $\Gamma$, \nonterm{x}:\nonterm{T} \\
+\nonterm{l} & $\in \mathcal{N}$  & Address \\
+%\nonterm{H} & := & Value environment \\
+%& $\emptyset$ & empty env \\
+%& \nonterm{H}, \nonterm{x}:\nonterm{v}  \\
+\nonterm{v} & ::= & Value \\
+& \nonterm{c} & constant \\
+& \nonterm{l} & address \\
+& $\lambda$\nonterm{x}.\nonterm{t} & lambda \\
+\end{tabular}
+\end{tabular} %
+\caption{The syntax and semantic definitions of the programming language.}
+\label{fig:syntax}
+\end{figure}
+
+\begin{figure}
+\begin{tabular}{l l l}
+\nonterm{E} & ::= & [] | \KW{let} \nonterm{x}=[] \KW{in} \nonterm{t} | \KW{let} \nonterm{x} = \nonterm{v} \KW{in} \nonterm{t} \\
+\end{tabular}
+
+\begin{mathpar}
+\begin{array}{l l}
+%\inferrule[(ECST)]{}
+%{H ~ | ~ c \mapsto H ~ | ~ c }
+%
+%\inferrule[(EVAR)]{ x : v \in H }
+%{H ~ | ~ x \mapsto H ~ | ~ v }
+%
+%\inferrule[(EREF)]{ fresh(l) }
+%{H ~ | ~ alloc  \mapsto H ~ | ~ l }
+%
+%\inferrule[(ELET-VAR)]{}
+%{H ~ | ~ \KW{let} ~ x = y ~ \KW{in} ~ t \mapsto H ~ | ~ [y / x]t }
+
+\inferrule{}
+{\KW{let} ~ x = y ~ \KW{in} ~ t \mapsto [y/x]t} & 
+\mbox{(ELET-VAR)}
+\\
+
+\inferrule{}
+{\KW{let} ~ x = \lambda z.t  ~ \KW{in} ~ E[x y] \mapsto \KW{let} ~ x = \lambda z.t \KW{in} ~ E[[y/z]t] } &
+\mbox{(ELET-ABS)}
+\\
+
+\inferrule{}
+{\KW{let} ~ x = (\KW{let} ~ y = t_1 \KW{in} ~ t_2) ~ \KW{in} ~ t_3 \mapsto \KW{let} ~ y = t_1 ~ \KW{in} ~ \KW{let} ~ x = t_2 ~ \KW{in} ~ t_3} &
+\mbox{(ELET-LET)}
+\\
+
+\inferrule{}
+{E[t_1] \mapsto E[t_2]} \quad \mbox{\textbf{if} } t_1 \mapsto t_2 &
+\mbox{(ET)}
+\end{array}
+\end{mathpar}
+
+\caption{Semantics}
+\end{figure}
+
+\begin{figure}
+\begin{mathpar}
+\begin{array}{l l}
+\inferrule{}
+{\Gamma \vdash c : B} & \mbox{(TCST)}
+\\
+\inferrule{}
+{\Gamma \vdash alloc : \REF^{~ \emptyset}} & \mbox{(TREF)}
+\\
+\inferrule{\Gamma(x) = T}
+{\Gamma \vdash x : T} & \mbox{(TVAR)}
+\\
+\inferrule{\Gamma \vdash t_1: T_1^{~\alpha}  \\ \Gamma, x:T_1^{~\alpha \cup \{x\}} \vdash t_2 : T_2^{~\beta}}
+{\Gamma \vdash \KW{let} ~ x = t_1 \KW{in} ~ t_2 : T_2^{~\beta \backslash \{x\}}} & \mbox{(TLET)}
+\\
+\inferrule{ \Gamma, x : T_1^{~\alpha} \vdash t : T_2^{~\beta} \\ \gamma = MV(t) }
+{\Gamma \vdash \lambda x. t : T_1^{~\alpha} \to T_2^{~\beta} \to f^{~\gamma}} & \mbox{(TABS)}
+\\
+\inferrule{ \Gamma \vdash t_1 : T_1^{~\alpha} \to T_2^{~\beta} \to f^{~\gamma} \\ \Gamma \vdash t_2 : T_1^{\delta} \\ \gamma \cap \delta = \alpha }
+{\Gamma \vdash t_1t_2 : T_2^{~[\delta \backslash x]\beta} } & \mbox{(TAPP)}
+\end{array}
+\end{mathpar}
+\caption{Types}
+\end{figure}
+
+\begin{figure}
+\begin{mathpar}
+\begin{array}{r l l}
+MV(c) & = & \emptyset \\
+MV(x) & = & \{x\} \\
+MV(alloc) & = & \emptyset \\
+MV(\KW{let} ~ x = t_1 ~ \KW{in} ~ t_2) & = & MV(t_1) \cup MV(t_2) - \{x\} \\
+MV(\lambda x. t) & = & MV(t) - \{x\} \\
+MV(t_1t_2) & = & MV(t_1) \cup MV(t_2) 
+\end{array}
+\end{mathpar}
+\end{figure}

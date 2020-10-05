@@ -36,7 +36,7 @@ Without the \emph{transient} or \KW{mut} or {shr} modifier, the caller loses the
 $~$\nonterm{t} & \: & \nonterm{c} \| \nonterm{x} \| \KW{new} $\mu_1\mu_2$\nonterm{T} \| $\lambda$\nonterm{x}:$\mu_1\mu_2$\nonterm{T}.\nonterm{t} \| \nonterm{t}\nonterm{t} \| $\lambda$\nonterm{X}.\nonterm{t} \| \nonterm{t}[\nonterm{T}] 
 & & \| \{\nonterm{t},\nonterm{t}\} \| \nonterm{t}.$1$ \| \nonterm{t}.$2$ 
 $~$\nonterm{v} & \: & \nonterm{c} \| $\lambda$\nonterm{x}:$\mu_1\mu_2$\nonterm{T}.\nonterm{t} \| $\lambda$\nonterm{X}.\nonterm{t} \| \{\nonterm{v},\nonterm{v}\}
-$~$\nonterm{T}$_s$ & \: & \nonterm{B} \| \nonterm{X} \| \nonterm{T}$_s\to$\nonterm{T}$_s$ \| $\forall$\nonterm{X}.\nonterm{T}$_s$ \| \nonterm{T}$$_s\times$\nonterm{T}$_s$
+$~$\nonterm{T}$_s$ & \: & \nonterm{B} \| \nonterm{X} \| \nonterm{T}$_s\to$\nonterm{T}$_s$ \| $\forall$\nonterm{X}.\nonterm{T}$_s$ \| \nonterm{T}$_s\times$\nonterm{T}$_s$
 $~\Gamma_s$ & \: & $\emptyset$ \| $\Gamma$, \nonterm{x}:\nonterm{T}$_s$ \| $\Gamma$,\nonterm{X}
 $~\mu_1$ & \: & \KW{any} \| \KW{sep}
 $~\mu_2$ & \: & \KW{any} \| \KW{local} \| \KW{mut} \| \KW{shr}
@@ -78,20 +78,20 @@ Each closure instance will be identified by a unique token that represents the c
 
 There is a store $s$ that maps from variables to values, and a heap $h$ that maps from locations to values. A location is a pair of an address and its owner. Addresses are natural numbers. 
 Heap looks up is denoted by $h(l)$, where $l$ is a location. Heap extension is denoted by $h + (l, v)$, where $\RESTRICT{l}{1} \notin \RESTRICT{\DOM(h)}{1}$. 
-Ownership updates is denoted by $h[addr, o]$, where $(addr, \_) \in \DOM(h)$, and $for all (addr', o') \in \DOM(h). (addr' \neq addr \Rightarrow h[addr, o](addr', o') = h(addr', o')) \land addr == addr' \Rightarrow h[addr, o](addr, o) = h(addr', o')$.
+%Ownership updates is denoted by $h[addr, o]$, where $(addr, \_) \in \DOM(h)$, and $for all (addr', o') \in \DOM(h). (addr' \neq addr \Rightarrow h[addr, o](addr', o') = h(addr', o')) \land addr == addr' \Rightarrow h[addr, o](addr, o) = h(addr', o')$.
 
 \begin{figure}[!ht]
 \small
 \centering
 \begin{grammar}%
 \begin{tabular}{r r l}
-$~$\nonterm{addr} & \: & $\mathbar{N}$
+$~$\nonterm{addr} & \: & $\mathbb{N}$
 $~$\nonterm{l} & \: & (\nonterm{addr},\nonterm{o})
 $~$\nonterm{s} & \: & $\overline{x \mapsto v}$
 $~$\nonterm{h} & \: & $\overline{l \mapsto v}$
 $~$\nonterm{o} & \: & $\epsilon$ \| \nonterm{addr} \| \nonterm{id} 
 $~$\nonterm{v} & \: & \nonterm{l} \| \nonterm{null}$_l$ \| $\lambda$\nonterm{x}.\nonterm{t} \| \{\nonterm{v},\nonterm{v}\}
-$~\mu$ & \: & \KW{mut}\& \| \KW{shr}\& \| \KW{sep}
+$~$\nonterm{T} & \: & $\REF_{mut}$\nonterm{T} \| $\REF_{shr}$ \nonterm{T} \| sep \| local
 %$~\Gamma_r$ & \: & $\emptyset$ \| $\Gamma$, \nonterm{X} $\mapsto$ \nonterm{T}$_r$ \| $\Gamma$,\nonterm{x} $\mapsto$ v
 \end{tabular} %
 \end{grammar}
@@ -113,10 +113,10 @@ $~\mu$ & \: & \KW{mut}\& \| \KW{shr}\& \| \KW{sep}
 %\inferrule[(\emph{eabs})]{ v = \lambda x . t \\ c' = c + (id, v) }
 %{\MEVAL{(s, h)}{\lambda x:T_r.t}{(s, h'), v}}
 
-\begin{array}{l}
-\inferrule[(\emph{eproj})] { \MEVAL{(s, h)}{t}{l} \\ v = h(l)[i]}
-{\MEVAL{(s, h)}{t.i}{(s, h), v}} \\
-\end{array}
+%\begin{array}{l}
+%\inferrule[(\emph{eproj})] { \MEVAL{(s, h)}{t}{l} \\ v = h(l)[i]}
+%{\MEVAL{(s, h)}{t.i}{(s, h), v}} \\
+%\end{array}
 
 \inferrule[(\emph{eapp})]{ \theta(id_1) = \lambda x. t_3 \\ \MEVAL{(s, h)}{t_2}{(s, h), (addr, o)} \\ h_2 = (h_1[addr, \epsilon][addr_1, o_1]) \\ \NMEVAL{(s, x:(addr, o), h)}{t_3}{(s_1, h_1), (addr_1, o_1)}{id_1}}
 {\MEVAL{(s, h)}{t_1 t_2}{(s, h_2), (addr_1, o_1)}}
