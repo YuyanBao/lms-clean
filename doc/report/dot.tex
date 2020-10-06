@@ -54,6 +54,136 @@ $\Gamma$ & :=  & Type context \\
 \begin{figure}[!htb]
 \begin{mathpar}
 \begin{array}{l l}
+\inferrule{}
+{\Gamma \vdash c : Int^{0}} & \mbox{(TCST)}
+\\
+\inferrule{\Gamma(x) = T}
+{\Gamma \vdash x : T} & \mbox{(TVAR)}
+\\
+\inferrule{}
+{\Gamma \vdash alloc : \&Int^\emptyset} & \mbox{(TREF)} 
+\\
+\inferrule{\Gamma \vdash x : \&Int^{\alpha}}
+{\Gamma \vdash inc(x) : Int^{0}} & \mbox{(TINC)}
+\\
+\inferrule{\Gamma \vdash t_1: Int^{0}  \\ \Gamma, x:Int^{0} \vdash t_2 : T_2^{d}}
+{\Gamma \vdash \KW{let} ~ x = t_1 \KW{in} ~ t_2 : T_2^{d}} & \mbox{(TLET1)}
+\\
+\inferrule{\Gamma \vdash t_1: T_1^{~\alpha}  \\ \Gamma, x:T_1^{~\alpha \cup \{x\}} \vdash t_2 : T_2^{0}}
+{\Gamma \vdash \KW{let} ~ x = t_1 \KW{in} ~ t_2 : T_2^{0}} & \mbox{(TLET2)}
+\\
+\inferrule{\Gamma \vdash t_1: T_1^{~\alpha}  \\ \Gamma, x:T_1^{~\alpha \cup \{x\}} \vdash t_2 : T_2^{~\beta}}
+{\Gamma \vdash \KW{let} ~ x = t_1 \KW{in} ~ t_2 : T_2^{~\beta \backslash \{x\}}} & \mbox{(TLET3)}
+\\
+%\inferrule{ \Gamma, x : T_1^{\{x\}} \vdash t : T_2^{\emptyset} \\ \gamma = MV(t) }
+%{\Gamma \vdash \lambda x. t : (T_1^{\emptyset} \to T_2^{\emptyset})^{~\gamma}} & \mbox{(TABS1)}\\
+%\mbox{where } \gamma \cap \{x\} = \emptyset \\
+%\\
+%\inferrule{ \Gamma, x : T_1^{\{x\}} \vdash t : T_2^{\{x\}} \\ \gamma = MV(t) }
+%{\Gamma \vdash \lambda x. t : (T_1^{\{\emptyset\}} \to T_2^{~\{x\}})^{~\gamma}} & \mbox{(TABS2)} \\
+%\mbox{where } \gamma \cap \{x\} = \emptyset \\
+\inferrule{ \Gamma, x : T_1^{0} \vdash t : T_2^{d} \\ \gamma = MV(t) }
+{\Gamma \vdash \lambda x. t : (T_1^{0} \to T_2^{d})^{~\gamma}} & \mbox{(TABS1)} \\
+\mbox{where } \gamma \cap \{x\} = \emptyset \\
+\inferrule{ \Gamma, x : T_1^{\alpha \cup \{x\}} \vdash t : T_2^{d} \\ \gamma = MV(t) }
+{\Gamma \vdash \lambda x. t : (T_1^{\alpha} \to T_2^{d})^{~\gamma}} & \mbox{(TABS2)} \\
+\mbox{where } \gamma \cap \{x\} = \emptyset \\
+\\
+\inferrule{ \Gamma \vdash t_1 : (T_1^{~\alpha} \to T_2^{~\beta})^{~\gamma} \\ \Gamma \vdash t_2 : T_1^{\delta} \\ \gamma \cap \delta = \alpha }
+{\Gamma \vdash t_1t_2 : T_2^{~[\delta \backslash x]\beta} } & \mbox{(TAPP)}
+\end{array}
+\end{mathpar}
+\caption{Types}
+\end{figure}
+
+\clearpage
+\begin{figure}[!htb]
+\emph{Abstraction rules}
+\begin{enumerate}
+\item $\gamma$ is a set of variables.
+\item $\forall x \in \gamma, \Gamma(x) : \&Int^{\alpha}$ 
+\end{enumerate}
+
+\begin{mathpar}
+\begin{array}{l l}
+\inferrule{ \Gamma, x : T_1^{0} \vdash t : T_2^{d} \\ \gamma \cap \{x\} = \emptyset \\ \gamma = MV(t) }
+{\Gamma \vdash \lambda x. t : (T_1^{0} \to T_2^{d})^{~\gamma}} & \mbox{(TABS1)} \\
+\inferrule{ \Gamma, x : T_1^{\alpha \cup \{x\}} \vdash t : T_2^{d} \\ \gamma \cap \{x\} = \emptyset \\ \gamma = MV(t) }
+{\Gamma \vdash \lambda x. t : (T_1^{\alpha} \to T_2^{d})^{~\gamma}} & \mbox{(TABS2)} \\
+\mbox{where } \gamma \cap \{x\} = \emptyset \\
+\end{array}
+\end{mathpar}
+
+\begin{lstlisting}[language=Scala,basicstyle=\footnotesize\ttfamily]
+def f(x: Int) = alloc()        // (Int$^{0}$ -> &Int$^{\emptyset}$)$^{\emptyset}$ (by TABS1)
+def f(x: &Int) = alloc()       // (&Int$^{\emptyset}$ -> &Int$^{\emptyset}$)$^{\emptyset}$ (by TABS2)
+def f(x: &Int) = x             // (&Int$^{\emptyset}$ -> &Int$^{\{x\}}$)$^{\emptyset}$ (by TABS2)
+
+let y = alloc() in
+  def f(x: &Int) = y           // (&Int$^{\emptyset}$ -> &Int$^{y}$)$^{\{y\}}$ (by TABS2)
+\end{lstlisting}
+\caption{Program example of applying the rule \emph{TABS}}
+
+\begin{mathpar}
+\begin{array}{l l}
+\inferrule{ \Gamma, x : Int^{0} \vdash t : \&Int^{\emptyset} \\  MV(alloc) = \emptyset}
+{\Gamma \vdash \lambda x. alloc : (Int^{0} \to \&Int^{\emptyset})^{\emptyset}} & \mbox{(TABS1)}
+\\
+\inferrule{ \Gamma, x : \&Int^{\{x\}} \vdash alloc : \&Int^{\emptyset} \\ MV(alloc) = \emptyset }
+{\Gamma \vdash \lambda x. alloc : (\&Int^{\emptyset} \to \&Int^{\emptyset})^{\emptyset}} & \mbox{(TABS2)}
+\\
+\inferrule{ \Gamma, x : \&Int^{\{x\}} \vdash x : \&Int^{\{x\}} \\ MV(x) - \{x\} = \emptyset }
+{\Gamma \vdash \lambda x. x : (\&Int^{\emptyset} \to \&Int^{~\{x\}})^{~\emptyset}} & \mbox{(TABS2)}
+\\
+\inferrule{ \Gamma, x : \&Int^{\{x\}} \vdash y : \&Int^{\{x\}} \\ MV(y) - \{x\} = \{y\} }
+{\Gamma \vdash \lambda x. y : (\&Int^{\emptyset} \to \&Int^{~\{y\}})^{y}} & \mbox{(TABS2)}
+\end{array}
+\end{mathpar}
+\caption{Example of appying the rule TABS.}
+
+\begin{mathpar}
+\begin{array}{l l}
+\inferrule{\Gamma \vdash 1 : Int^{0} \\ \Gamma, x: Int^{0} \vdash 1 : Int^{0}}
+{\Gamma \vdash \KW{let} ~ x = 1 ~ \KW{in} ~ 1 : Int^{0}} & \mbox{(TLET1)} 
+\\
+\inferrule{\Gamma \vdash 1 : Int^{0} \\ \Gamma, x: Int^{0} \vdash alloc : \&Int^{\emptyset}}
+{\Gamma \vdash \KW{let} ~ x = 1 ~ \KW{in} ~ alloc : \&Int^{\emptyset}} & \mbox{(TLET1)}
+\\
+\inferrule{\Gamma \vdash alloc : \&Int^{\emptyset} \\ \Gamma, x: \&Int^{\{x\}} \vdash 1 : Int^{0}}
+{\Gamma \vdash \KW{let} ~ x = alloc ~ \KW{in} ~ 1 : Int^{0}} & \mbox{(TLET2)}
+\\
+\inferrule{\Gamma \vdash inc(y) : Int^{\emptyset} \\ \Gamma, x: Int^{\emptyset} \vdash 1 : Int^{0}}
+{\Gamma \vdash \KW{let} ~ x = inc(y) ~ \KW{in} ~ 1 : Int^{0}} & \mbox{(TLET1)}
+\\
+\inferrule{\Gamma \vdash \lambda y. t : (T_1^{\alpha} \to Int^{0})^{\beta}  \\ \Gamma, x: (T_1^{\alpha} \to Int^{0})^{\beta} \vdash 1 : Int^{0}}
+{\Gamma \vdash \KW{let} ~ x = \lambda y. t ~ \KW{in} ~ 1 : Int^{0}} & \mbox{(TLET???)}  \\
+\inferrule{\Gamma \vdash \lambda y. z : (\&Int^{\{y\}} \to \&Int^{\beta})^{\{z\}}  \\ \Gamma, x: (T_1^{\alpha} \to T_2^{\beta})^{\gamma} \vdash x(z) : Int^{0}}
+{\Gamma \vdash \KW{let} ~ x = \lambda y.z ~ \KW{in} ~ x(z) : Int^{0}} & \mbox{(TLET???)}
+\\
+\end{array}
+\end{mathpar}
+\caption{Examples}
+\end{figure}
+
+
+\begin{figure}[!htb]
+\begin{mathpar}
+\begin{array}{r l l l}
+MV(c) & = & \emptyset \\
+MV(x) & = & \{x\} & \mbox{if } \Gamma(x) = \&Int^{~\alpha}\\
+MV(alloc) & = & \emptyset \\
+MV(inc(x)) & = & \{x\} \\
+MV(\KW{let} ~ x = t_1 ~ \KW{in} ~ t_2) & = & MV(t_1) \cup MV(t_2) - \{x\} \\
+MV(\lambda x. t) & = & MV(t) - \{x\} \\
+MV(t_1t_2) & = & MV(t_1) \cup MV(t_2) 
+\end{array}
+\end{mathpar}
+\caption{Definition of MV}
+\end{figure}
+
+\begin{figure}[!htb]
+\begin{mathpar}
+\begin{array}{l l}
 %\inferrule[(ECST)]{}
 %{H ~ | ~ c \mapsto H ~ | ~ c }
 %
@@ -86,78 +216,7 @@ $\Gamma$ & :=  & Type context \\
 \mbox{(ET)}
 \end{array}
 \end{mathpar}
-
-\caption{Semantics}
-\end{figure}
-
-\begin{figure}[!htb]
-\begin{mathpar}
-\begin{array}{l l}
-\inferrule{}
-{\Gamma \vdash c : Int^{0}} & \mbox{(TCST)}
-\\
-\inferrule{\Gamma(x) = T}
-{\Gamma \vdash x : T} & \mbox{(TVAR)}
-\\
-\inferrule{}
-{\Gamma \vdash alloc : \&Int^\emptyset} & \mbox{(TREF)} 
-\\
-\inferrule{\Gamma \vdash x : \&Int^{\alpha}}
-{\Gamma \vdash inc(x) : Int^{0}} & \mbox{(TINC)}
-\\
-\inferrule{\Gamma \vdash t_1: Int^{0}  \\ \Gamma, x:Int^{0} \vdash t_2 : T_2^{d}}
-{\Gamma \vdash \KW{let} ~ x = t_1 \KW{in} ~ t_2 : T_2^{d}} & \mbox{(TLET1)}
-\\
-\inferrule{\Gamma \vdash t_1: T_1^{~\alpha}  \\ \Gamma, x:T_1^{~\alpha \cup \{x\}} \vdash t_2 : T_2^{0}}
-{\Gamma \vdash \KW{let} ~ x = t_1 \KW{in} ~ t_2 : T_2^{0}} & \mbox{(TLET2)}
-\\
-\inferrule{\Gamma \vdash t_1: T_1^{~\alpha}  \\ \Gamma, x:T_1^{~\alpha \cup \{x\}} \vdash t_2 : T_2^{~\beta}}
-{\Gamma \vdash \KW{let} ~ x = t_1 \KW{in} ~ t_2 : T_2^{~\beta \backslash \{x\}}} & \mbox{(TLET3)}
-\\
-\inferrule{ \Gamma, x : T_1^{~\alpha} \vdash t : T_2^{~\beta} \\ \gamma = MV(t) }
-{\Gamma \vdash \lambda x. t : T_1^{~\alpha} \to T_2^{~\beta} \to f^{~\gamma}} & \mbox{(TABS)}
-\\
-\inferrule{ \Gamma \vdash t_1 : T_1^{~\alpha} \to T_2^{~\beta} \to f^{~\gamma} \\ \Gamma \vdash t_2 : T_1^{\delta} \\ \gamma \cap \delta = \alpha }
-{\Gamma \vdash t_1t_2 : T_2^{~[\delta \backslash x]\beta} } & \mbox{(TAPP)}
-\end{array}
-\end{mathpar}
-\caption{Types}
-\end{figure}
-
-\begin{figure}[!htb]
-\begin{mathpar}
-\begin{array}{l l}
-\inferrule{\Gamma \vdash 1 : Int^{0} \\ \Gamma, x: Int^{0} \vdash 1 : Int^{0}}
-{\Gamma \vdash \KW{let} ~ x = 1 ~ \KW{in} ~ 1 : Int^{0}} & \mbox{(TLET1)} 
-\\
-\inferrule{\Gamma \vdash 1 : Int^{0} \\ \Gamma, x: Int^{0} \vdash alloc : \&Int^{\emptyset}}
-{\Gamma \vdash \KW{let} ~ x = 1 ~ \KW{in} ~ alloc : \&Int^{\emptyset}} & \mbox{(TLET1)}
-\\
-\inferrule{\Gamma \vdash alloc : \&Int^{\emptyset} \\ \Gamma, x: \&Int^{\{x\}} \vdash 1 : Int^{0}}
-{\Gamma \vdash \KW{let} ~ x = alloc ~ \KW{in} ~ 1 : Int^{0}} & \mbox{(TLET2)}
-\\
-\inferrule{\Gamma \vdash inc(y) : Int^{\emptyset} \\ \Gamma, x: Int^{\emptyset} \vdash 1 : Int^{0}}
-{\Gamma \vdash \KW{let} ~ x = inc(y) ~ \KW{in} ~ 1 : Int^{0}} & \mbox{(TLET1)}
-\\
-\inferrule{\Gamma \vdash \lambda y. t : (T_1^{\alpha} \to Int^{0})^{\beta}  \\ \Gamma, x: (T_1^{\alpha} \to Int^{0})^{\beta} \vdash 1 : Int^{0}}
-{\Gamma \vdash \KW{let} ~ x = \lambda y. t ~ \KW{in} ~ 1 : Int^{0}} & \mbox{(TLET1)}
-\end{array}
-\end{mathpar}
-\caption{Examples}
-\end{figure}
-
-\begin{figure}[!htb]
-\begin{mathpar}
-\begin{array}{r l l}
-MV(c) & = & \emptyset \\
-MV(x) & = & \{x\} \\
-MV(alloc) & = & \emptyset \\
-MV(\KW{let} ~ x = t_1 ~ \KW{in} ~ t_2) & = & MV(t_1) \cup MV(t_2) - \{x\} \\
-MV(\lambda x. t) & = & MV(t) - \{x\} \\
-MV(t_1t_2) & = & MV(t_1) \cup MV(t_2) 
-\end{array}
-\end{mathpar}
-\caption{Definition of MV}
+\caption{Semantics (Reduction)}
 \end{figure}
 
 \begin{lemma}[Substitution] If $\Gamma, x : T^{~\alpha \cup \{x\}} \vdash t : T^{\beta}$ and $\Gamma \vdash [y / x]t : [y/x]T^{\beta}$.
