@@ -4,21 +4,25 @@
 \centering
 \begin{tabular}{l | l}
 \begin{tabular}{r l l}
-\nonterm{d} & ::=  & Dependency \\
-& $0$ 	& not track \\
+\nonterm{non-track} & ::= & non track \\
+& 0 & \\
+$\alpha$, $\beta$, $\gamma$ & ::= &  track \\
 & $\emptyset$ &  emptyset \\
 & \{\nonterm{x}\} & singleton set \\
-& d$_1$ $\cup$ d$_2$  & set union \\
-& d$_1$ $\backslash$ d$_2$ & set subtraction\\
+& $\alpha_1 \cup \alpha_2$  & set union \\
+& $\alpha_1 \backslash \alpha_2$ & set subtraction\\
+\nonterm{d} & ::=  & Dependency \\
+& \nonterm{non-track} 	& not track \\
+& \nonterm{track} & track \\
 \nonterm{T} & ::= & Type \\
-& \nonterm{B} & Boolean \\
-& \nonterm{ref}$^{d}$ & Reference type \\
-& \nonterm{f}$^{d}$ & ??? \\
-& \nonterm{T}$_1$ $\to$ \nonterm{T}$_2$ $\to$ \nonterm{T}$_3$ & type of functions \\
+& \nonterm{Int}$^{0}$ & Integer \\
+& \nonterm{\&Int}$^{\alpha}$ & Reference type \\
+& (\nonterm{T}$_1^{d_1}$ $\to$ \nonterm{T}$_2^{d_2})^{d_3}$ & type of functions \\
 \nonterm{t} & ::= & Term \\
 & \nonterm{c} & constant \\
 & \nonterm{x} & variable \\
 & \nonterm{alloc} & allocation \\
+& \nonterm{inc}(\nonterm{x}) & mutation \\
 & \KW{let} \nonterm{x} = \nonterm{t}$_1$ \KW{in} \nonterm{t}$_2$  & let binding \\
 & $\lambda$\nonterm{x}.\nonterm{t} & abstraction \\
 & \nonterm{t}$_1$\nonterm{t}$_2$ & application \\
@@ -28,24 +32,26 @@ $\Gamma$ & :=  & Type context \\
 & $\emptyset$ & Empty context \\
 & $\Gamma$, \nonterm{x}:\nonterm{T} \\
 \nonterm{l} & $\in \mathcal{N}$  & Address \\
-%\nonterm{H} & := & Value environment \\
-%& $\emptyset$ & empty env \\
-%& \nonterm{H}, \nonterm{x}:\nonterm{v}  \\
+\nonterm{H} & := & Value environment \\
+& $\emptyset$ & empty env \\
+& \nonterm{H}, \nonterm{x}:\nonterm{v}  \\
 \nonterm{v} & ::= & Value \\
 & \nonterm{c} & constant \\
 & \nonterm{l} & address \\
-& $\lambda$\nonterm{x}.\nonterm{t} & lambda \\
+& <\nonterm{H}, $\lambda$\nonterm{x}.\nonterm{t}> & closure \\
+\nonterm{e} $\in$ \nonterm{E} & ::= & Evaluation context \\
+& [] & \\
+& \KW{let} \nonterm{x}=[] \KW{in} \nonterm{e} \\
+& \KW{let} \nonterm{x} = \nonterm{v} \KW{in} \nonterm{e} \\ 
+& \nonterm{e} t \\
+& \nonterm{v} e
 \end{tabular}
 \end{tabular} %
 \caption{The syntax and semantic definitions of the programming language.}
 \label{fig:syntax}
 \end{figure}
 
-\begin{figure}
-\begin{tabular}{l l l}
-\nonterm{E} & ::= & [] | \KW{let} \nonterm{x}=[] \KW{in} \nonterm{t} | \KW{let} \nonterm{x} = \nonterm{v} \KW{in} \nonterm{t} \\
-\end{tabular}
-
+\begin{figure}[!htb]
 \begin{mathpar}
 \begin{array}{l l}
 %\inferrule[(ECST)]{}
@@ -84,20 +90,29 @@ $\Gamma$ & :=  & Type context \\
 \caption{Semantics}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[!htb]
 \begin{mathpar}
 \begin{array}{l l}
 \inferrule{}
-{\Gamma \vdash c : B} & \mbox{(TCST)}
-\\
-\inferrule{}
-{\Gamma \vdash alloc : \REF^{~ \emptyset}} & \mbox{(TREF)}
+{\Gamma \vdash c : Int^{0}} & \mbox{(TCST)}
 \\
 \inferrule{\Gamma(x) = T}
 {\Gamma \vdash x : T} & \mbox{(TVAR)}
 \\
+\inferrule{}
+{\Gamma \vdash alloc : \&Int^\emptyset} & \mbox{(TREF)} 
+\\
+\inferrule{\Gamma \vdash x : \&Int^{\alpha}}
+{\Gamma \vdash inc(x) : Int^{0}} & \mbox{(TINC)}
+\\
+\inferrule{\Gamma \vdash t_1: Int^{0}  \\ \Gamma, x:Int^{0} \vdash t_2 : T_2^{d}}
+{\Gamma \vdash \KW{let} ~ x = t_1 \KW{in} ~ t_2 : T_2^{d}} & \mbox{(TLET1)}
+\\
+\inferrule{\Gamma \vdash t_1: T_1^{~\alpha}  \\ \Gamma, x:T_1^{~\alpha \cup \{x\}} \vdash t_2 : T_2^{0}}
+{\Gamma \vdash \KW{let} ~ x = t_1 \KW{in} ~ t_2 : T_2^{0}} & \mbox{(TLET2)}
+\\
 \inferrule{\Gamma \vdash t_1: T_1^{~\alpha}  \\ \Gamma, x:T_1^{~\alpha \cup \{x\}} \vdash t_2 : T_2^{~\beta}}
-{\Gamma \vdash \KW{let} ~ x = t_1 \KW{in} ~ t_2 : T_2^{~\beta \backslash \{x\}}} & \mbox{(TLET)}
+{\Gamma \vdash \KW{let} ~ x = t_1 \KW{in} ~ t_2 : T_2^{~\beta \backslash \{x\}}} & \mbox{(TLET3)}
 \\
 \inferrule{ \Gamma, x : T_1^{~\alpha} \vdash t : T_2^{~\beta} \\ \gamma = MV(t) }
 {\Gamma \vdash \lambda x. t : T_1^{~\alpha} \to T_2^{~\beta} \to f^{~\gamma}} & \mbox{(TABS)}
@@ -109,7 +124,29 @@ $\Gamma$ & :=  & Type context \\
 \caption{Types}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[!htb]
+\begin{mathpar}
+\begin{array}{l l}
+\inferrule{\Gamma \vdash 1 : Int^{0} \\ \Gamma, x: Int^{0} \vdash 1 : Int^{0}}
+{\Gamma \vdash \KW{let} ~ x = 1 ~ \KW{in} ~ 1 : Int^{0}} & \mbox{(TLET1)} 
+\\
+\inferrule{\Gamma \vdash 1 : Int^{0} \\ \Gamma, x: Int^{0} \vdash alloc : \&Int^{\emptyset}}
+{\Gamma \vdash \KW{let} ~ x = 1 ~ \KW{in} ~ alloc : \&Int^{\emptyset}} & \mbox{(TLET1)}
+\\
+\inferrule{\Gamma \vdash alloc : \&Int^{\emptyset} \\ \Gamma, x: \&Int^{\{x\}} \vdash 1 : Int^{0}}
+{\Gamma \vdash \KW{let} ~ x = alloc ~ \KW{in} ~ 1 : Int^{0}} & \mbox{(TLET2)}
+\\
+\inferrule{\Gamma \vdash inc(y) : Int^{\emptyset} \\ \Gamma, x: Int^{\emptyset} \vdash 1 : Int^{0}}
+{\Gamma \vdash \KW{let} ~ x = inc(y) ~ \KW{in} ~ 1 : Int^{0}} & \mbox{(TLET1)}
+\\
+\inferrule{\Gamma \vdash \lambda y. t : (T_1^{\alpha} \to Int^{0})^{\beta}  \\ \Gamma, x: (T_1^{\alpha} \to Int^{0})^{\beta} \vdash 1 : Int^{0}}
+{\Gamma \vdash \KW{let} ~ x = \lambda y. t ~ \KW{in} ~ 1 : Int^{0}} & \mbox{(TLET1)}
+\end{array}
+\end{mathpar}
+\caption{Examples}
+\end{figure}
+
+\begin{figure}[!htb]
 \begin{mathpar}
 \begin{array}{r l l}
 MV(c) & = & \emptyset \\
@@ -120,4 +157,11 @@ MV(\lambda x. t) & = & MV(t) - \{x\} \\
 MV(t_1t_2) & = & MV(t_1) \cup MV(t_2) 
 \end{array}
 \end{mathpar}
+\caption{Definition of MV}
 \end{figure}
+
+\begin{lemma}[Substitution] If $\Gamma, x : T^{~\alpha \cup \{x\}} \vdash t : T^{\beta}$ and $\Gamma \vdash [y / x]t : [y/x]T^{\beta}$.
+\end{lemma}
+
+\begin{theorem}[Soundness] If $\Gamma \vdash E[t]:T^{~\alpha}$, then either $t$ is an answer $(t = x)$ or there exists $\Gamma', E', t'$, such that $E[t] \to E'[t']$ and $\Gamma, \Gamma' \vdash E'[t']: T^{~\alpha}$.
+\end{theorem}
